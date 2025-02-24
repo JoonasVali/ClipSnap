@@ -3,6 +3,7 @@ package com.github.joonasvali.bookreaderai;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Line2D;
 import java.util.ArrayList;
 
 public class ImagePanel extends JLayeredPane {
@@ -71,37 +72,95 @@ public class ImagePanel extends JLayeredPane {
    */
   private static class DrawingPanel extends JPanel {
     private final ArrayList<Line> lines = new ArrayList<>();
-    private Point startPoint;
+    private Point startPoint; // For drawing new lines
+    private Line selectedLine; // Line selected for moving endpoints
+    private boolean draggingStartPoint; // Indicates which endpoint is dragged
+    private Point currentPoint; // Current point for temporary line
+    private Point mousePoint; // Current mouse position
 
     public DrawingPanel() {
-      setOpaque(false); // Transparent so the image shows through.
+      setOpaque(false);
 
-      // Mouse listener to record the start point and add lines on release.
       addMouseListener(new MouseAdapter() {
         @Override
         public void mousePressed(MouseEvent e) {
-          startPoint = e.getPoint();
+          Point p = e.getPoint();
+
+          if (e.getButton() == MouseEvent.BUTTON3) { // Right-click to delete line
+            Line lineToRemove = null;
+            for (Line line : lines) {
+              if (line.isNearLine(p)) {
+                lineToRemove = line;
+                break;
+              }
+            }
+            if (lineToRemove != null) {
+              lines.remove(lineToRemove);
+              repaint();
+            }
+            return;
+          }
+
+          selectedLine = null;
+
+          // Check if the click is near any line endpoint
+          for (Line line : lines) {
+            if (line.isNearStart(p)) {
+              selectedLine = line;
+              draggingStartPoint = true;
+              break;
+            } else if (line.isNearEnd(p)) {
+              selectedLine = line;
+              draggingStartPoint = false;
+              break;
+            }
+          }
+
+          if (selectedLine == null) {
+            // Start drawing a new line
+            startPoint = p;
+          }
         }
 
         @Override
         public void mouseReleased(MouseEvent e) {
-          if (startPoint != null) {
-            lines.add(new Line(startPoint, e.getPoint()));
+          if (startPoint != null && currentPoint != null) {
+            // Add new line to the list
+            lines.add(new Line(startPoint, currentPoint));
             startPoint = null;
+            currentPoint = null;
+            repaint();
+          }
+          if (selectedLine != null) {
+            selectedLine = null;
             repaint();
           }
         }
       });
 
-      // Mouse motion listener to add continuous lines while dragging.
       addMouseMotionListener(new MouseMotionAdapter() {
         @Override
         public void mouseDragged(MouseEvent e) {
-          if (startPoint != null) {
-            lines.add(new Line(startPoint, e.getPoint()));
-            startPoint = e.getPoint();
+          Point p = e.getPoint();
+          if (selectedLine != null) {
+            // Move the selected endpoint
+            if (draggingStartPoint) {
+              selectedLine.start = p;
+            } else {
+              selectedLine.end = p;
+            }
+            repaint();
+          } else if (startPoint != null) {
+            // Update current point for temporary line
+            currentPoint = p;
             repaint();
           }
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+          mousePoint = e.getPoint();
+          repaint();
         }
       });
     }
@@ -112,8 +171,51 @@ public class ImagePanel extends JLayeredPane {
       g.setColor(Color.RED);
       Graphics2D g2 = (Graphics2D) g;
       g2.setStroke(new BasicStroke(2));
+
+      // Draw all lines
       for (Line line : lines) {
         g2.drawLine(line.start.x, line.start.y, line.end.x, line.end.y);
+
+        // Draw start point
+        if (mousePoint != null && line.isNearStart(mousePoint)) {
+          g2.setColor(Color.CYAN);
+          g2.fillOval(line.start.x - 3, line.start.y - 3, 6, 6);
+          g2.setColor(Color.RED);
+        } else {
+          g2.fillOval(line.start.x - 3, line.start.y - 3, 6, 6);
+        }
+
+        // Draw end point
+        if (mousePoint != null && line.isNearEnd(mousePoint)) {
+          g2.setColor(Color.CYAN);
+          g2.fillOval(line.end.x - 3, line.end.y - 3, 6, 6);
+          g2.setColor(Color.RED);
+        } else {
+          g2.fillOval(line.end.x - 3, line.end.y - 3, 6, 6);
+        }
+      }
+
+      // Draw temporary line while drawing
+      if (startPoint != null && currentPoint != null) {
+        g2.drawLine(startPoint.x, startPoint.y, currentPoint.x, currentPoint.y);
+
+        // Draw start point of temporary line
+        if (mousePoint != null && startPoint.distance(mousePoint) < 10) {
+          g2.setColor(Color.CYAN);
+          g2.fillOval(startPoint.x - 3, startPoint.y - 3, 6, 6);
+          g2.setColor(Color.RED);
+        } else {
+          g2.fillOval(startPoint.x - 3, startPoint.y - 3, 6, 6);
+        }
+
+        // Draw current point of temporary line
+        if (mousePoint != null && currentPoint.distance(mousePoint) < 10) {
+          g2.setColor(Color.CYAN);
+          g2.fillOval(currentPoint.x - 3, currentPoint.y - 3, 6, 6);
+          g2.setColor(Color.RED);
+        } else {
+          g2.fillOval(currentPoint.x - 3, currentPoint.y - 3, 6, 6);
+        }
       }
     }
 
@@ -121,16 +223,14 @@ public class ImagePanel extends JLayeredPane {
       lines.clear();
       repaint();
     }
+
+    public ArrayList<Line> getLines() {
+      return lines;
+    }
   }
 
-  /**
-   * Helper class to store line coordinates.
-   */
-  private static class Line {
-    final Point start, end;
-    public Line(Point start, Point end) {
-      this.start = start;
-      this.end = end;
-    }
+
+  public ArrayList<Line> getLines() {
+    return drawingPanel.getLines();
   }
 }

@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
+import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +18,7 @@ public class ApplicationUI extends JFrame {
   private JTextArea textArea;
   private JButton prevButton;
   private JButton nextButton;
+  private JButton cutButton;
   private BufferedImage loadedImage;
   private ImagePanel imagePanel;
 
@@ -71,14 +73,70 @@ public class ApplicationUI extends JFrame {
 
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
+    cutButton = new JButton("CUT!");
 
     // Add action listeners to buttons
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
+    cutButton.addActionListener(e -> {
+      List<Line> lines = imagePanel.getLines();
+      if (lines.isEmpty()) {
+        return;
+      }
+      BufferedImage[] images = ImageCutter.cutImage(loadedImage, lines.get(0));
+
+      // Get screen size
+      Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+      int screenWidth = screenSize.width;
+      int screenHeight = screenSize.height;
+
+      // Max size for each image
+      int maxImageWidth = screenWidth / 2 - 50;
+      int maxImageHeight = screenHeight - 100;
+
+      // Resize images if necessary
+      BufferedImage[] resizedImages = new BufferedImage[2];
+      for (int i = 0; i < images.length; i++) {
+        BufferedImage originalImage = images[i];
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
+
+        double widthScale = (double) maxImageWidth / width;
+        double heightScale = (double) maxImageHeight / height;
+        double scale = Math.min(widthScale, heightScale);
+
+        if (scale < 1.0) {
+          int newWidth = (int) (width * scale);
+          int newHeight = (int) (height * scale);
+          Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+          BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+          Graphics2D g2d = resized.createGraphics();
+          g2d.drawImage(tmp, 0, 0, null);
+          g2d.dispose();
+          resizedImages[i] = resized;
+        } else {
+          resizedImages[i] = originalImage;
+        }
+      }
+
+      // Open JFrame with two images
+      JFrame frame = new JFrame();
+      frame.setLayout(new GridLayout(1, 2));
+
+      JLabel label1 = new JLabel(new ImageIcon(resizedImages[0]));
+      JLabel label2 = new JLabel(new ImageIcon(resizedImages[1]));
+
+      frame.add(label1);
+      frame.add(label2);
+
+      frame.pack();
+      frame.setVisible(true);
+    });
 
     // Add buttons to bottom panel
     bottomPanel.add(prevButton);
     bottomPanel.add(nextButton);
+    bottomPanel.add(cutButton);
 
     // Add panels to main panel
     mainPanel.add(centerPanel, BorderLayout.CENTER);
