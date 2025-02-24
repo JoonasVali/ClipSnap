@@ -3,11 +3,11 @@ package com.github.joonasvali.bookreaderai;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 public class ApplicationUI extends JFrame {
   private Path[] paths;
@@ -18,6 +18,7 @@ public class ApplicationUI extends JFrame {
   private JButton prevButton;
   private JButton nextButton;
   private BufferedImage loadedImage;
+  private ImagePanel imagePanel;
 
   private Timer resizeTimer;  // Timer for debounce
 
@@ -40,6 +41,8 @@ public class ApplicationUI extends JFrame {
     pack();
     setLocationRelativeTo(null); // Center the frame
     setVisible(true);
+
+    imagePanel.refreshIcon();
   }
 
   private void initComponents() {
@@ -53,14 +56,14 @@ public class ApplicationUI extends JFrame {
     imageLabel = new JLabel();
     imageLabel.setHorizontalAlignment(JLabel.CENTER);
 
-
     // Text area
     textArea = new JTextArea();
     textArea.setEditable(true);
     JScrollPane textScrollPane = new JScrollPane(textArea);
 
     // Add image label and text area to center panel
-    centerPanel.add(imageLabel);
+    imagePanel = new ImagePanel(imageLabel);
+    centerPanel.add(imagePanel);
     centerPanel.add(textScrollPane);
 
     // Bottom panel for navigation buttons
@@ -96,6 +99,7 @@ public class ApplicationUI extends JFrame {
 
     // Display the first image
     updateDisplay();
+
   }
 
   private void showPreviousImage() {
@@ -108,6 +112,7 @@ public class ApplicationUI extends JFrame {
         throw new RuntimeException(e);
       }
 
+      imagePanel.clearDrawings();
       updateDisplay();
     }
   }
@@ -122,6 +127,7 @@ public class ApplicationUI extends JFrame {
         throw new RuntimeException(e);
       }
 
+      imagePanel.clearDrawings();
       updateDisplay();
     }
   }
@@ -172,7 +178,10 @@ public class ApplicationUI extends JFrame {
     // Update buttons' enabled state
     prevButton.setEnabled(currentIndex > 0);
     nextButton.setEnabled(currentIndex < paths.length - 1);
+
+    imagePanel.refreshIcon();
   }
+
   private BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
     BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
     Graphics2D g2d = resizedImage.createGraphics();
