@@ -2,8 +2,9 @@ package com.github.joonasvali.bookreaderai;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.Line2D;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 
 public class ImagePanel extends JLayeredPane {
