@@ -24,7 +24,6 @@ public class ImageCutter {
       results[i] = image.getSubimage(x, y, width, h);
     }
 
-
     return results;
   }
 }

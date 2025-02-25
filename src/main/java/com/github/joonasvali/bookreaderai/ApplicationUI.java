@@ -1,5 +1,7 @@
 package com.github.joonasvali.bookreaderai;
 
+import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -8,6 +10,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
 
 public class ApplicationUI extends JFrame {
   private Path[] paths;
@@ -85,6 +88,19 @@ public class ApplicationUI extends JFrame {
     nextButton.addActionListener(e -> showNextImage());
     askButton.addActionListener(e -> {
       BufferedImage[] images = ImageCutter.cutImage(loadedImage, (Integer) zoomLevel.getValue(), 50);
+
+      SimpleTranscriberAgent transcriber = new SimpleTranscriberAgent(images[0]);
+      try {
+        var future = transcriber.transcribe();
+        textArea.setText(future.get());
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      } catch (ExecutionException ex) {
+        throw new RuntimeException(ex);
+      } catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
+      }
+
 
       // Get screen size
       Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();

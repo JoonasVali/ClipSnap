@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai.transcribe;
 
 import java.awt.image.BufferedImage;
+import java.util.concurrent.CompletableFuture;
 
 public class Transcriber {
   private BufferedImage[] bufferedImages;
@@ -8,7 +9,7 @@ public class Transcriber {
     this.bufferedImages = bufferedImages;
   }
 
-  public void transcribeImages() {
-
+  public CompletableFuture<String> transcribeImages() {
+    return null;
   }
 }
