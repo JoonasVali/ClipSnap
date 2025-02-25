@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai.transcribe;
 
-import com.github.joonasvali.bookreaderai.openai.ImageProcess;
+import com.github.joonasvali.bookreaderai.openai.ImageAnalysis;
+import com.github.joonasvali.bookreaderai.openai.ImageAnalysisResult;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -23,8 +24,12 @@ public class SimpleTranscriberAgent {
   public CompletableFuture<String> transcribe() throws IOException {
     return CompletableFuture.supplyAsync(() -> {
       try {
-        ImageProcess imageProcess = new ImageProcess(bufferedImage, SYSTEM_PROMPT);
-        return imageProcess.process(bufferedImage);
+        ImageAnalysis imageAnalysis = new ImageAnalysis(bufferedImage, SYSTEM_PROMPT);
+        ImageAnalysisResult<String> result = imageAnalysis.process(bufferedImage);
+        System.out.println("Prompt tokens: " + result.promptTokens());
+        System.out.println("Completion tokens: " + result.completionTokens());
+        System.out.println("Total tokens: " + result.totalTokens());
+        return result.text();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

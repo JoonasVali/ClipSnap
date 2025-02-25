@@ -14,11 +14,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 
-public class ImageProcess {
+/*
+ * The official OpenAI API client does not allow sending images, so this is a temporary workaround.
+ *
+ * This class is responsible for sending an image to OpenAI's API and receiving a text response.
+ *
+ */
+public class ImageAnalysis {
   private final BufferedImage bufferedImage;
   private final String prompt;
 
-  public ImageProcess(BufferedImage bufferedImage, String prompt) {
+  public ImageAnalysis(BufferedImage bufferedImage, String prompt) {
     this.bufferedImage = bufferedImage;
     this.prompt = prompt;
   }
@@ -31,7 +37,7 @@ public class ImageProcess {
   }
 
 
-  public String process(BufferedImage bufferedImage) throws IOException {
+  public ImageAnalysisResult<String> process(BufferedImage bufferedImage) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
@@ -39,10 +45,14 @@ public class ImageProcess {
     JSONArray choices = jsonObject.getJSONArray("choices");
     JSONObject choice = choices.getJSONObject(0);
     JSONObject message = choice.getJSONObject("message");
-    return message.getString("content");
+    JSONObject usage = jsonObject.getJSONObject("usage");
+    int totalTokens = usage.getInt("total_tokens");
+    int promptTokens = usage.getInt("prompt_tokens");
+    int completionTokens = usage.getInt("completion_tokens");
+    return new ImageAnalysisResult<>(message.getString("content"), totalTokens, promptTokens, completionTokens);
   }
 
-  public String[] process(BufferedImage bufferedImage, int answers) throws IOException {
+  public ImageAnalysisResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
     String result =  sendRequestToOpenAI(jsonBody);
@@ -54,7 +64,11 @@ public class ImageProcess {
       JSONObject message = choice.getJSONObject("message");
       results[i] = message.getString("content");
     }
-    return results;
+    JSONObject usage = jsonObject.getJSONObject("usage");
+    int totalTokens = usage.getInt("total_tokens");
+    int promptTokens = usage.getInt("prompt_tokens");
+    int completionTokens = usage.getInt("completion_tokens");
+    return new ImageAnalysisResult<>(results, totalTokens, promptTokens, completionTokens);
   }
 
   public JSONObject createJsonPayload(String base64Image, int n) {
