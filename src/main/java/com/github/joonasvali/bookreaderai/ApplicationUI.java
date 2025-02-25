@@ -1,6 +1,5 @@
 package com.github.joonasvali.bookreaderai;
 
-import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -18,7 +17,6 @@ public class ApplicationUI extends JFrame {
   private JTextArea textArea;
   private JButton prevButton;
   private JButton nextButton;
-  private JButton cutButton;
   private BufferedImage loadedImage;
   private ImagePanel imagePanel;
 
@@ -70,20 +68,23 @@ public class ApplicationUI extends JFrame {
 
     // Bottom panel for navigation buttons
     JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+
+    SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
+    JSpinner zoomLevel = new JSpinner(model);
+
+    JButton askButton = new JButton("Transcribe");
+    topPanel.add(zoomLevel);
+    topPanel.add(askButton);
 
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
-    cutButton = new JButton("CUT!");
 
     // Add action listeners to buttons
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
-    cutButton.addActionListener(e -> {
-      List<Line> lines = imagePanel.getLines();
-      if (lines.isEmpty()) {
-        return;
-      }
-      BufferedImage[] images = ImageCutter.cutImage(loadedImage, lines.get(0));
+    askButton.addActionListener(e -> {
+      BufferedImage[] images = ImageCutter.cutImage(loadedImage, (Integer) zoomLevel.getValue(), 50);
 
       // Get screen size
       Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -91,11 +92,11 @@ public class ApplicationUI extends JFrame {
       int screenHeight = screenSize.height;
 
       // Max size for each image
-      int maxImageWidth = screenWidth / 2 - 50;
+      int maxImageWidth = screenWidth / images.length - 20;
       int maxImageHeight = screenHeight - 100;
 
       // Resize images if necessary
-      BufferedImage[] resizedImages = new BufferedImage[2];
+      BufferedImage[] resizedImages = new BufferedImage[images.length];
       for (int i = 0; i < images.length; i++) {
         BufferedImage originalImage = images[i];
         int width = originalImage.getWidth();
@@ -119,15 +120,13 @@ public class ApplicationUI extends JFrame {
         }
       }
 
-      // Open JFrame with two images
+      // Open JFrame with dynamic number of images
       JFrame frame = new JFrame();
-      frame.setLayout(new GridLayout(1, 2));
+      frame.setLayout(new GridLayout(1, images.length));
 
-      JLabel label1 = new JLabel(new ImageIcon(resizedImages[0]));
-      JLabel label2 = new JLabel(new ImageIcon(resizedImages[1]));
-
-      frame.add(label1);
-      frame.add(label2);
+      for (BufferedImage img : resizedImages) {
+        frame.add(new JLabel(new ImageIcon(img)));
+      }
 
       frame.pack();
       frame.setVisible(true);
@@ -136,9 +135,8 @@ public class ApplicationUI extends JFrame {
     // Add buttons to bottom panel
     bottomPanel.add(prevButton);
     bottomPanel.add(nextButton);
-    bottomPanel.add(cutButton);
 
-    // Add panels to main panel
+    mainPanel.add(topPanel, BorderLayout.NORTH);
     mainPanel.add(centerPanel, BorderLayout.CENTER);
     mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 

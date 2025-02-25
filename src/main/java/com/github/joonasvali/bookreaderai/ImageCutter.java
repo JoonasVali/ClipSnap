@@ -1,37 +1,30 @@
 package com.github.joonasvali.bookreaderai;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class ImageCutter {
-  public static BufferedImage[] cutImage(BufferedImage image, Line line) {
+  public static BufferedImage[] cutImage(BufferedImage image, int verticalPieces, int overlapPx) {
     int width = image.getWidth();
     int height = image.getHeight();
-    BufferedImage image1 = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-    BufferedImage image2 = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
-    Point start = line.start;
-    Point end = line.end;
+    BufferedImage[] results = new BufferedImage[verticalPieces];
+    for (int i = 0; i < verticalPieces; i++) {
+      int x = 0;
+      int y = i * height / verticalPieces;
+      int h = height / verticalPieces;
 
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        int position = (x - start.x) * (end.y - start.y) - (y - start.y) * (end.x - start.x);
-
-        int rgb = image.getRGB(x, y);
-
-        if (position > 0) {
-          image1.setRGB(x, y, rgb);
-          image2.setRGB(x, y, Color.BLACK.getRGB());
-        } else if (position < 0) {
-          image1.setRGB(x, y, Color.BLACK.getRGB());
-          image2.setRGB(x, y, rgb);
-        } else {
-          image1.setRGB(x, y, rgb);
-          image2.setRGB(x, y, rgb);
-        }
+      if (i > 0) {
+        y -= overlapPx;
+        h += overlapPx;
       }
+      if (i < verticalPieces - 1) {
+        h += overlapPx;
+      }
+
+      results[i] = image.getSubimage(x, y, width, h);
     }
 
-    return new BufferedImage[]{image1, image2};
+
+    return results;
   }
 }
