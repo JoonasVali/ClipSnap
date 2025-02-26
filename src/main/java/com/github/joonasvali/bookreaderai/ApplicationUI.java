@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
+import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriberAgent;
 import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
 
 import javax.imageio.ImageIO;
@@ -89,63 +90,59 @@ public class ApplicationUI extends JFrame {
     askButton.addActionListener(e -> {
       BufferedImage[] images = ImageCutter.cutImage(loadedImage, (Integer) zoomLevel.getValue(), 50);
 
-      SimpleTranscriberAgent transcriber = new SimpleTranscriberAgent(images[0]);
+      JoinedTranscriberAgent transcriber = new JoinedTranscriberAgent(images, "estonian", "This story is historical from around ww2");
+
       try {
-        var future = transcriber.transcribe();
-        textArea.setText(future.get());
+        transcriber.transcribeImages(text -> textArea.setText(text));
       } catch (IOException ex) {
         throw new RuntimeException(ex);
-      } catch (ExecutionException ex) {
-        throw new RuntimeException(ex);
-      } catch (InterruptedException ex) {
-        throw new RuntimeException(ex);
       }
 
-
-      // Get screen size
-      Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-      int screenWidth = screenSize.width;
-      int screenHeight = screenSize.height;
-
-      // Max size for each image
-      int maxImageWidth = screenWidth / images.length - 20;
-      int maxImageHeight = screenHeight - 100;
-
-      // Resize images if necessary
-      BufferedImage[] resizedImages = new BufferedImage[images.length];
-      for (int i = 0; i < images.length; i++) {
-        BufferedImage originalImage = images[i];
-        int width = originalImage.getWidth();
-        int height = originalImage.getHeight();
-
-        double widthScale = (double) maxImageWidth / width;
-        double heightScale = (double) maxImageHeight / height;
-        double scale = Math.min(widthScale, heightScale);
-
-        if (scale < 1.0) {
-          int newWidth = (int) (width * scale);
-          int newHeight = (int) (height * scale);
-          Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
-          BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
-          Graphics2D g2d = resized.createGraphics();
-          g2d.drawImage(tmp, 0, 0, null);
-          g2d.dispose();
-          resizedImages[i] = resized;
-        } else {
-          resizedImages[i] = originalImage;
-        }
-      }
-
-      // Open JFrame with dynamic number of images
-      JFrame frame = new JFrame();
-      frame.setLayout(new GridLayout(1, images.length));
-
-      for (BufferedImage img : resizedImages) {
-        frame.add(new JLabel(new ImageIcon(img)));
-      }
-
-      frame.pack();
-      frame.setVisible(true);
+//
+//      // Get screen size
+//      Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//      int screenWidth = screenSize.width;
+//      int screenHeight = screenSize.height;
+//
+//      // Max size for each image
+//      int maxImageWidth = screenWidth / images.length - 20;
+//      int maxImageHeight = screenHeight - 100;
+//
+//      // Resize images if necessary
+//      BufferedImage[] resizedImages = new BufferedImage[images.length];
+//      for (int i = 0; i < images.length; i++) {
+//        BufferedImage originalImage = images[i];
+//        int width = originalImage.getWidth();
+//        int height = originalImage.getHeight();
+//
+//        double widthScale = (double) maxImageWidth / width;
+//        double heightScale = (double) maxImageHeight / height;
+//        double scale = Math.min(widthScale, heightScale);
+//
+//        if (scale < 1.0) {
+//          int newWidth = (int) (width * scale);
+//          int newHeight = (int) (height * scale);
+//          Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+//          BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+//          Graphics2D g2d = resized.createGraphics();
+//          g2d.drawImage(tmp, 0, 0, null);
+//          g2d.dispose();
+//          resizedImages[i] = resized;
+//        } else {
+//          resizedImages[i] = originalImage;
+//        }
+//      }
+//
+//      // Open JFrame with dynamic number of images
+//      JFrame frame = new JFrame();
+//      frame.setLayout(new GridLayout(1, images.length));
+//
+//      for (BufferedImage img : resizedImages) {
+//        frame.add(new JLabel(new ImageIcon(img)));
+//      }
+//
+//      frame.pack();
+//      frame.setVisible(true);
     });
 
     // Add buttons to bottom panel
