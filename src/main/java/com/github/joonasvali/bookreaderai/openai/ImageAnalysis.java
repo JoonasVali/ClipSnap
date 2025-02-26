@@ -37,7 +37,7 @@ public class ImageAnalysis {
   }
 
 
-  public ImageAnalysisResult<String> process(BufferedImage bufferedImage) throws IOException {
+  public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
@@ -49,10 +49,10 @@ public class ImageAnalysis {
     int totalTokens = usage.getInt("total_tokens");
     int promptTokens = usage.getInt("prompt_tokens");
     int completionTokens = usage.getInt("completion_tokens");
-    return new ImageAnalysisResult<>(message.getString("content"), totalTokens, promptTokens, completionTokens);
+    return new ProcessingResult<>(message.getString("content"), totalTokens, promptTokens, completionTokens);
   }
 
-  public ImageAnalysisResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
+  public ProcessingResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
     String result =  sendRequestToOpenAI(jsonBody);
@@ -68,7 +68,7 @@ public class ImageAnalysis {
     int totalTokens = usage.getInt("total_tokens");
     int promptTokens = usage.getInt("prompt_tokens");
     int completionTokens = usage.getInt("completion_tokens");
-    return new ImageAnalysisResult<>(results, totalTokens, promptTokens, completionTokens);
+    return new ProcessingResult<>(results, totalTokens, promptTokens, completionTokens);
   }
 
   public JSONObject createJsonPayload(String base64Image, int n) {

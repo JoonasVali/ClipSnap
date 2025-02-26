@@ -1,7 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriberAgent;
-import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -11,7 +10,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 public class ApplicationUI extends JFrame {
   private Path[] paths;
@@ -23,6 +22,7 @@ public class ApplicationUI extends JFrame {
   private JButton nextButton;
   private BufferedImage loadedImage;
   private ImagePanel imagePanel;
+  private JProgressBar bar;
 
   private Timer resizeTimer;  // Timer for debounce
 
@@ -55,6 +55,7 @@ public class ApplicationUI extends JFrame {
 
     // Center panel for image and text
     JPanel centerPanel = new JPanel(new GridLayout(1, 2));
+    bar = new JProgressBar();
 
     // Image label
     imageLabel = new JLabel();
@@ -80,6 +81,7 @@ public class ApplicationUI extends JFrame {
     JButton askButton = new JButton("Transcribe");
     topPanel.add(zoomLevel);
     topPanel.add(askButton);
+    topPanel.add(bar);
 
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
@@ -87,13 +89,31 @@ public class ApplicationUI extends JFrame {
     // Add action listeners to buttons
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
+
     askButton.addActionListener(e -> {
+      bar.setValue(5); // Dummy value to show progress bar is working
+
+      ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
       BufferedImage[] images = ImageCutter.cutImage(loadedImage, (Integer) zoomLevel.getValue(), 50);
 
+      Consumer<Float> listener = progress -> {
+        SwingUtilities.invokeLater(() -> bar.setValue((int) (progress * 100)));
+      };
+      progressUpdateUtility.setListener(listener);
+
       JoinedTranscriberAgent transcriber = new JoinedTranscriberAgent(images, "estonian", "This story is historical from around ww2");
+      transcriber.setProgressUpdateUtility(progressUpdateUtility);
+
 
       try {
-        transcriber.transcribeImages(text -> textArea.setText(text));
+        transcriber.transcribeImages(result -> {
+          System.out.println("Prompt tokens: " + result.promptTokens());
+          System.out.println("Completion tokens: " + result.completionTokens());
+          System.out.println("Total tokens: " + result.totalTokens());
+          textArea.setText(result.text());
+          progressUpdateUtility.removeListener(listener);
+          bar.setValue(0);
+        });
       } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
