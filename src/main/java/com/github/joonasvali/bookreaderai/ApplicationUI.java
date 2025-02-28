@@ -10,7 +10,9 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.function.Consumer;
 
 public class ApplicationUI extends JFrame {
@@ -25,11 +27,17 @@ public class ApplicationUI extends JFrame {
   private BufferedImage loadedImage;
   private ImagePanel imagePanel;
   private JProgressBar bar;
+  private final String outputFolder;
+  private Path fileTxtPath;
+  private final FileHandler fileHandler;
 
   private Timer resizeTimer;  // Timer for debounce
 
   public ApplicationUI(Path[] paths, String outputFolder) {
     this.paths = paths;
+    this.outputFolder = outputFolder;
+
+    this.fileHandler = new FileHandler(outputFolder);
 
     try {
       loadedImage = ImageIO.read(paths[currentIndex].toFile());
@@ -39,6 +47,8 @@ public class ApplicationUI extends JFrame {
 
     // Initialize the UI components
     initComponents();
+    calculateFileOutputPath();
+    loadContent();
 
     // Set up the frame
     setTitle("Image Viewer");
@@ -80,10 +90,13 @@ public class ApplicationUI extends JFrame {
     SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
     JSpinner zoomLevel = new JSpinner(model);
 
+    saveButton = new JButton("Save");
+
     JButton askButton = new JButton("Transcribe");
     topPanel.add(zoomLevel);
     topPanel.add(askButton);
     topPanel.add(bar);
+    topPanel.add(saveButton);
 
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
@@ -91,6 +104,11 @@ public class ApplicationUI extends JFrame {
     // Add action listeners to buttons
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
+
+    // Add action listener to saveButton
+    saveButton.addActionListener(e -> {
+      saveContent();
+    });
 
     askButton.addActionListener(e -> {
       bar.setValue(5); // Dummy value to show progress bar is working
@@ -195,9 +213,35 @@ public class ApplicationUI extends JFrame {
 
   }
 
+  private void loadContent() {
+    try {
+      String content = fileHandler.loadFromFile(currentIndex);
+      textArea.setText(content);
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(this, "Failed to load file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void saveContent() {
+    String content = textArea.getText();
+    if (content.isEmpty()) {
+      JOptionPane.showMessageDialog(this, "Text area is empty. Nothing to save.", "Warning", JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+
+    try {
+      fileHandler.saveToFile(currentIndex, content);
+      JOptionPane.showMessageDialog(this, "File saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+    } catch (IOException ex) {
+      JOptionPane.showMessageDialog(this, "Failed to save file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
   private void showPreviousImage() {
     if (currentIndex > 0) {
       currentIndex--;
+      calculateFileOutputPath();
+      loadContent();
 
       try {
         loadedImage = ImageIO.read(paths[currentIndex].toFile());
@@ -213,6 +257,8 @@ public class ApplicationUI extends JFrame {
   private void showNextImage() {
     if (currentIndex < paths.length - 1) {
       currentIndex++;
+      calculateFileOutputPath();
+      loadContent();
 
       try {
         loadedImage = ImageIO.read(paths[currentIndex].toFile());
@@ -223,6 +269,10 @@ public class ApplicationUI extends JFrame {
       imagePanel.clearDrawings();
       updateDisplay();
     }
+  }
+
+  private void calculateFileOutputPath() {
+    fileTxtPath = Paths.get(outputFolder, currentIndex + ".txt");
   }
 
   private void updateDisplay() {
@@ -264,9 +314,6 @@ public class ApplicationUI extends JFrame {
     // Force UI update
     imageLabel.revalidate();
     imageLabel.repaint();
-
-    // Clear text area (or you can load specific text related to the image)
-    textArea.setText("");
 
     // Update buttons' enabled state
     prevButton.setEnabled(currentIndex > 0);
