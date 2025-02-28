@@ -12,18 +12,20 @@ public class FileHandler {
     this.outputFolder = outputFolder;
   }
 
-  public Path getFilePath(int index) {
-    return Paths.get(outputFolder, index + ".txt");
+  public Path getFilePath(String fileNameBody) {
+    return Paths.get(outputFolder, fileNameBody + ".txt");
   }
 
-  public void saveToFile(int index, String content) throws IOException {
-    Path filePath = getFilePath(index);
+  public void saveToFile(String fileNameBody, String content) throws IOException {
+    System.out.println("Saving to file: " + fileNameBody);
+    Path filePath = getFilePath(fileNameBody);
     Files.createDirectories(filePath.getParent());
     Files.writeString(filePath, content);
   }
 
-  public String loadFromFile(int index) throws IOException {
-    Path filePath = getFilePath(index);
+  public String loadFromFile(String fileNameBody) throws IOException {
+    System.out.println("Loading from file: " + fileNameBody);
+    Path filePath = getFilePath(fileNameBody);
     if (Files.exists(filePath)) {
       return Files.readString(filePath);
     }

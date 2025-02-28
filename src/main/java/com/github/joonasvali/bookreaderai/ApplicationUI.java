@@ -10,7 +10,6 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.function.Consumer;
@@ -30,6 +29,7 @@ public class ApplicationUI extends JFrame {
   private final String outputFolder;
   private Path fileTxtPath;
   private final FileHandler fileHandler;
+  private String inputFileName;
 
   private Timer resizeTimer;  // Timer for debounce
 
@@ -41,6 +41,7 @@ public class ApplicationUI extends JFrame {
 
     try {
       loadedImage = ImageIO.read(paths[currentIndex].toFile());
+      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -215,7 +216,7 @@ public class ApplicationUI extends JFrame {
 
   private void loadContent() {
     try {
-      String content = fileHandler.loadFromFile(currentIndex);
+      String content = fileHandler.loadFromFile(inputFileName);
       textArea.setText(content);
     } catch (IOException e) {
       JOptionPane.showMessageDialog(this, "Failed to load file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -230,7 +231,7 @@ public class ApplicationUI extends JFrame {
     }
 
     try {
-      fileHandler.saveToFile(currentIndex, content);
+      fileHandler.saveToFile(inputFileName, content);
       JOptionPane.showMessageDialog(this, "File saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
     } catch (IOException ex) {
       JOptionPane.showMessageDialog(this, "Failed to save file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -240,7 +241,7 @@ public class ApplicationUI extends JFrame {
   private boolean isUnsavedChanges() {
     try {
       String currentContent = textArea.getText();
-      String savedContent = fileHandler.loadFromFile(currentIndex);
+      String savedContent = fileHandler.loadFromFile(inputFileName);
       return !currentContent.equals(savedContent);
     } catch (IOException e) {
       return true; // Assume there are unsaved changes if an error occurs
@@ -259,6 +260,7 @@ public class ApplicationUI extends JFrame {
       }
 
       currentIndex--;
+      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
       calculateFileOutputPath();
       loadContent();
 
@@ -285,6 +287,7 @@ public class ApplicationUI extends JFrame {
       }
 
       currentIndex++;
+      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
       calculateFileOutputPath();
       loadContent();
 
@@ -297,6 +300,12 @@ public class ApplicationUI extends JFrame {
       imagePanel.clearDrawings();
       updateDisplay();
     }
+  }
+
+  private String getFileNameWithoutSuffix(Path path) {
+    String fileName = path.getFileName().toString();
+    int dotIndex = fileName.lastIndexOf('.');
+    return (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
   }
 
   private void calculateFileOutputPath() {
