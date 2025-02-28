@@ -237,8 +237,27 @@ public class ApplicationUI extends JFrame {
     }
   }
 
+  private boolean isUnsavedChanges() {
+    try {
+      String currentContent = textArea.getText();
+      String savedContent = fileHandler.loadFromFile(currentIndex);
+      return !currentContent.equals(savedContent);
+    } catch (IOException e) {
+      return true; // Assume there are unsaved changes if an error occurs
+    }
+  }
+
   private void showPreviousImage() {
     if (currentIndex > 0) {
+      if (isUnsavedChanges()) {
+        int option = JOptionPane.showConfirmDialog(this, "You have unsaved changes. Do you want to save them before moving to the next image?", "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
+        if (option == JOptionPane.CANCEL_OPTION) {
+          return; // Do nothing if the user cancels
+        } else if (option == JOptionPane.YES_OPTION) {
+          saveContent(); // Save the content if the user chooses to save
+        }
+      }
+
       currentIndex--;
       calculateFileOutputPath();
       loadContent();
@@ -256,6 +275,15 @@ public class ApplicationUI extends JFrame {
 
   private void showNextImage() {
     if (currentIndex < paths.length - 1) {
+      if (isUnsavedChanges()) {
+        int option = JOptionPane.showConfirmDialog(this, "You have unsaved changes. Do you want to save them before moving to the next image?", "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
+        if (option == JOptionPane.CANCEL_OPTION) {
+          return; // Do nothing if the user cancels
+        } else if (option == JOptionPane.YES_OPTION) {
+          saveContent(); // Save the content if the user chooses to save
+        }
+      }
+
       currentIndex++;
       calculateFileOutputPath();
       loadContent();
