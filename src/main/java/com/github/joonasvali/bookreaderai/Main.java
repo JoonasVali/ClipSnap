@@ -2,20 +2,13 @@ package com.github.joonasvali.bookreaderai;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.ChatCompletion;
-import com.openai.models.ChatCompletionCreateParams;
-import com.openai.models.ChatModel;
 
 import javax.swing.*;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-
-import static com.github.joonasvali.bookreaderai.ImageLoader.loadImagesFromPaths;
 
 public class Main {
   private static final String INPUT_FOLDER = "C:\\Users\\Joonas\\Desktop\\Paul\\test";
@@ -25,21 +18,13 @@ public class Main {
   public static void main(String[] args) throws IOException, InterruptedException, InvocationTargetException {
     OpenAIClient client = OpenAIOkHttpClient.fromEnv();
 
-    Path[] inputFiles = listInputFolderContent();
+    Path[] inputFiles = sortByName(listInputFolderContent());
 
     SwingUtilities.invokeAndWait(() -> {
       ApplicationUI app = new ApplicationUI(inputFiles);
 
       app.setVisible(true);
     });
-
-
-//    ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-//        .addUserMessage("Say this is a test")
-//        .model(ChatModel.CHATGPT_4O_LATEST)
-//        .build();
-//    ChatCompletion chatCompletion = client.chat().completions().create(params);
-//    System.out.println(chatCompletion.choices().getFirst().message().content().orElse("-No content-"));
   }
 
   public static Path[] listInputFolderContent() throws IOException {

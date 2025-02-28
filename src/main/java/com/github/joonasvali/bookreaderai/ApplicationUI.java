@@ -1,6 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
-import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriberAgent;
+import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -101,7 +101,8 @@ public class ApplicationUI extends JFrame {
       };
       progressUpdateUtility.setListener(listener);
 
-      JoinedTranscriberAgent transcriber = new JoinedTranscriberAgent(images, "estonian", "This story is historical from around ww2");
+
+      JoinedTranscriber transcriber = new JoinedTranscriber(images, "estonian", "This story is historical from around ww2. ");
       transcriber.setProgressUpdateUtility(progressUpdateUtility);
 
 

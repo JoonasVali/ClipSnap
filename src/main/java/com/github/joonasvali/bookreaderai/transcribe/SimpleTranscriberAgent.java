@@ -19,9 +19,14 @@ public class SimpleTranscriberAgent {
   private final String languageDirection;
   private final BufferedImage bufferedImage;
   private final String story;
-
+  private boolean useFixerAgent;
+  private final String language;
 
   public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
+    this(bufferedImage, language, story, false);
+  }
+
+  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, boolean useFixerAgent) {
     this.bufferedImage = bufferedImage;
     if (language != null) {
       this.languageDirection = "The text is in " + language + " mostly.";
@@ -29,9 +34,11 @@ public class SimpleTranscriberAgent {
       this.languageDirection = "";
     }
     this.story = story;
+    this.useFixerAgent = useFixerAgent;
+    this.language = language;
   }
 
-  public CompletableFuture<String> transcribe() {
+  public CompletableFuture<ProcessingResult<String>> transcribe() {
     return CompletableFuture.supplyAsync(() -> {
       try {
         ImageAnalysis imageAnalysis = new ImageAnalysis(bufferedImage, SYSTEM_PROMPT
@@ -39,11 +46,23 @@ public class SimpleTranscriberAgent {
             .replace("${STORY}", story)
         );
         ProcessingResult<String> result = imageAnalysis.process(bufferedImage);
-        System.out.println("Prompt tokens: " + result.promptTokens());
-        System.out.println("Completion tokens: " + result.completionTokens());
-        System.out.println("Total tokens: " + result.totalTokens());
-        return result.text();
-      } catch (IOException e) {
+
+        ProcessingResult<String> fixedResult = null;
+        if (useFixerAgent) {
+          TranscribeFixerAgent fixerAgent = new TranscribeFixerAgent(language, story);
+          fixedResult = fixerAgent.fix(result.text());
+
+          return new ProcessingResult<String>(
+              fixedResult.text(),
+              result.promptTokens() + fixedResult.promptTokens(),
+              result.completionTokens() + fixedResult.completionTokens(),
+              result.totalTokens() + fixedResult.totalTokens()
+          );
+        } else {
+          return result;
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
         throw new RuntimeException(e);
       }
     });

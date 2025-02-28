@@ -13,6 +13,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 
 /*
  * The official OpenAI API client does not allow sending images, so this is a temporary workaround.
@@ -94,7 +95,11 @@ public class ImageAnalysis {
   }
 
   public static String sendRequestToOpenAI(JSONObject jsonBody) throws IOException {
-    OkHttpClient client = new OkHttpClient();
+    OkHttpClient client = new OkHttpClient.Builder()
+        .connectTimeout(120, TimeUnit.SECONDS) // Increase connect timeout
+        .writeTimeout(120, TimeUnit.SECONDS)   // Increase write timeout
+        .readTimeout(120, TimeUnit.SECONDS)    // Increase read timeout
+        .build();
 
     RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json"));
 
