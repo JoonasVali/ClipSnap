@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
+import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 
 import javax.imageio.ImageIO;
@@ -20,13 +21,14 @@ public class ApplicationUI extends JFrame {
   private JTextArea textArea;
   private JButton prevButton;
   private JButton nextButton;
+  private JButton saveButton;
   private BufferedImage loadedImage;
   private ImagePanel imagePanel;
   private JProgressBar bar;
 
   private Timer resizeTimer;  // Timer for debounce
 
-  public ApplicationUI(Path[] paths) {
+  public ApplicationUI(Path[] paths, String outputFolder) {
     this.paths = paths;
 
     try {
@@ -111,7 +113,8 @@ public class ApplicationUI extends JFrame {
           System.out.println("Prompt tokens: " + result.promptTokens());
           System.out.println("Completion tokens: " + result.completionTokens());
           System.out.println("Total tokens: " + result.totalTokens());
-          textArea.setText(result.text());
+          LineBreaker lineBreaker = new LineBreaker();
+          textArea.setText(lineBreaker.lineBreakAfterEvery(result.text(), 100));
           progressUpdateUtility.removeListener(listener);
           bar.setValue(0);
         });

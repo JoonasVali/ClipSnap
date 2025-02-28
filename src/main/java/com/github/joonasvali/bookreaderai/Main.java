@@ -21,7 +21,7 @@ public class Main {
     Path[] inputFiles = sortByName(listInputFolderContent());
 
     SwingUtilities.invokeAndWait(() -> {
-      ApplicationUI app = new ApplicationUI(inputFiles);
+      ApplicationUI app = new ApplicationUI(inputFiles, OUTPUT_FOLDER);
 
       app.setVisible(true);
     });
