@@ -270,7 +270,7 @@ public class ApplicationUI extends JFrame {
         throw new RuntimeException(e);
       }
 
-      imagePanel.clearDrawings();
+      imagePanel.resetCropRectangle();
       updateDisplay();
     }
   }
@@ -297,7 +297,7 @@ public class ApplicationUI extends JFrame {
         throw new RuntimeException(e);
       }
 
-      imagePanel.clearDrawings();
+      imagePanel.resetCropRectangle();
       updateDisplay();
     }
   }

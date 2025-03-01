@@ -2,10 +2,7 @@ package com.github.joonasvali.bookreaderai;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
-import java.util.ArrayList;
+import java.awt.event.*;
 
 public class ImagePanel extends JLayeredPane {
   private final JLabel imageLabel;
@@ -45,8 +42,8 @@ public class ImagePanel extends JLayeredPane {
       return; // No image yet, do nothing
     }
 
-    int panelWidth = getWidth();   // Get the width of ImagePanel
-    int panelHeight = getHeight(); // Get the height of ImagePanel
+    int panelWidth = getWidth();
+    int panelHeight = getHeight();
 
     if (panelWidth == 0 || panelHeight == 0) {
       return; // Prevent resizing issues before layout is set
@@ -57,103 +54,88 @@ public class ImagePanel extends JLayeredPane {
     drawingPanel.setBounds(0, 0, panelWidth, panelHeight);
     setPreferredSize(new Dimension(panelWidth, panelHeight));
 
-    revalidate();  // Update layout
-    repaint();     // Redraw the panel
+    // Initialize or update the crop rectangle corners to match the new bounds
+    drawingPanel.initializeCorners(panelWidth, panelHeight);
+
+    revalidate();
+    repaint();
   }
 
   /**
-   * Optional: Clears any drawn lines.
+   * Optionally clear the crop rectangle (reset to full image).
    */
-  public void clearDrawings() {
-    drawingPanel.clear();
+  public void resetCropRectangle() {
+    drawingPanel.resetCorners();
   }
 
   /**
-   * The transparent panel on top of the image that handles drawing.
+   * Returns the current crop rectangle corners.
+   * @return Array of four Points representing the crop rectangle corners.
+   */
+  public Point[] getCropCorners() {
+    return drawingPanel.getCorners();
+  }
+
+  /**
+   * The transparent panel on top of the image that handles drawing the crop rectangle.
    */
   private static class DrawingPanel extends JPanel {
-    private final ArrayList<Line> lines = new ArrayList<>();
-    private Point startPoint; // For drawing new lines
-    private Line selectedLine; // Line selected for moving endpoints
-    private boolean draggingStartPoint; // Indicates which endpoint is dragged
-    private Point currentPoint; // Current point for temporary line
+    private Point[] corners = null; // Array of 4 points for the rectangle corners
+    private int selectedCornerIndex = -1; // Index of the corner being dragged
     private Point mousePoint; // Current mouse position
+    private static final int MARKER_RADIUS = 6; // For a marker diameter of 12
+    private static final int DRAG_THRESHOLD = 10; // Threshold to select a corner
 
     public DrawingPanel() {
       setOpaque(false);
+
+      // Initialize corners once the component has a size.
+      addComponentListener(new ComponentAdapter() {
+        @Override
+        public void componentResized(ComponentEvent e) {
+          if (corners == null) {
+            int w = getWidth();
+            int h = getHeight();
+            initializeCorners(w, h);
+          }
+        }
+      });
 
       addMouseListener(new MouseAdapter() {
         @Override
         public void mousePressed(MouseEvent e) {
           Point p = e.getPoint();
-
-          if (e.getButton() == MouseEvent.BUTTON3) { // Right-click to delete line
-            Line lineToRemove = null;
-            for (Line line : lines) {
-              if (line.isNearLine(p)) {
-                lineToRemove = line;
+          // Check if the click is near any of the corners
+          if (corners != null) {
+            for (int i = 0; i < corners.length; i++) {
+              if (p.distance(corners[i]) < DRAG_THRESHOLD) {
+                selectedCornerIndex = i;
                 break;
               }
             }
-            if (lineToRemove != null) {
-              lines.remove(lineToRemove);
-              repaint();
-            }
-            return;
-          }
-
-          selectedLine = null;
-
-          // Check if the click is near any line endpoint
-          for (Line line : lines) {
-            if (line.isNearStart(p)) {
-              selectedLine = line;
-              draggingStartPoint = true;
-              break;
-            } else if (line.isNearEnd(p)) {
-              selectedLine = line;
-              draggingStartPoint = false;
-              break;
-            }
-          }
-
-          if (selectedLine == null) {
-            // Start drawing a new line
-            startPoint = p;
           }
         }
 
         @Override
         public void mouseReleased(MouseEvent e) {
-          if (startPoint != null && currentPoint != null) {
-            // Add new line to the list
-            lines.add(new Line(startPoint, currentPoint));
-            startPoint = null;
-            currentPoint = null;
-            repaint();
-          }
-          if (selectedLine != null) {
-            selectedLine = null;
-            repaint();
-          }
+          selectedCornerIndex = -1;
         }
       });
 
       addMouseMotionListener(new MouseMotionAdapter() {
         @Override
         public void mouseDragged(MouseEvent e) {
-          Point p = e.getPoint();
-          if (selectedLine != null) {
-            // Move the selected endpoint
-            if (draggingStartPoint) {
-              selectedLine.start = p;
-            } else {
-              selectedLine.end = p;
-            }
-            repaint();
-          } else if (startPoint != null) {
-            // Update current point for temporary line
-            currentPoint = p;
+          if (selectedCornerIndex != -1 && corners != null) {
+            // Clamp the dragged point within the panel bounds
+            int newX = e.getX();
+            int newY = e.getY();
+            int w = getWidth();
+            int h = getHeight();
+            if (newX < 0) newX = 0;
+            if (newY < 0) newY = 0;
+            if (newX > w) newX = w;
+            if (newY > h) newY = h;
+            corners[selectedCornerIndex] = new Point(newX, newY);
             repaint();
           }
         }
@@ -166,72 +148,68 @@ public class ImagePanel extends JLayeredPane {
       });
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-      super.paintComponent(g);
-      g.setColor(Color.RED);
-      Graphics2D g2 = (Graphics2D) g;
-      g2.setStroke(new BasicStroke(2));
-
-      // Draw all lines
-      for (Line line : lines) {
-        g2.drawLine(line.start.x, line.start.y, line.end.x, line.end.y);
-
-        // Draw start point
-        if (mousePoint != null && line.isNearStart(mousePoint)) {
-          g2.setColor(Color.CYAN);
-          g2.fillOval(line.start.x - 3, line.start.y - 3, 6, 6);
-          g2.setColor(Color.RED);
-        } else {
-          g2.fillOval(line.start.x - 3, line.start.y - 3, 6, 6);
-        }
-
-        // Draw end point
-        if (mousePoint != null && line.isNearEnd(mousePoint)) {
-          g2.setColor(Color.CYAN);
-          g2.fillOval(line.end.x - 3, line.end.y - 3, 6, 6);
-          g2.setColor(Color.RED);
-        } else {
-          g2.fillOval(line.end.x - 3, line.end.y - 3, 6, 6);
-        }
+    /**
+     * Initializes the corners of the crop rectangle to match the given width and height.
+     */
+    public void initializeCorners(int width, int height) {
+      if (corners == null) {
+        corners = new Point[4];
       }
-
-      // Draw temporary line while drawing
-      if (startPoint != null && currentPoint != null) {
-        g2.drawLine(startPoint.x, startPoint.y, currentPoint.x, currentPoint.y);
-
-        // Draw start point of temporary line
-        if (mousePoint != null && startPoint.distance(mousePoint) < 10) {
-          g2.setColor(Color.CYAN);
-          g2.fillOval(startPoint.x - 3, startPoint.y - 3, 6, 6);
-          g2.setColor(Color.RED);
-        } else {
-          g2.fillOval(startPoint.x - 3, startPoint.y - 3, 6, 6);
-        }
-
-        // Draw current point of temporary line
-        if (mousePoint != null && currentPoint.distance(mousePoint) < 10) {
-          g2.setColor(Color.CYAN);
-          g2.fillOval(currentPoint.x - 3, currentPoint.y - 3, 6, 6);
-          g2.setColor(Color.RED);
-        } else {
-          g2.fillOval(currentPoint.x - 3, currentPoint.y - 3, 6, 6);
-        }
-      }
-    }
-
-    public void clear() {
-      lines.clear();
+      corners[0] = new Point(0, 0);         // top-left
+      corners[1] = new Point(width, 0);       // top-right
+      corners[2] = new Point(width, height);  // bottom-right
+      corners[3] = new Point(0, height);      // bottom-left
       repaint();
     }
 
-    public ArrayList<Line> getLines() {
-      return lines;
+    /**
+     * Resets the crop rectangle to cover the full area.
+     */
+    public void resetCorners() {
+      if (getWidth() > 0 && getHeight() > 0) {
+        initializeCorners(getWidth(), getHeight());
+      }
+    }
+
+    /**
+     * Returns the current corners of the crop rectangle.
+     */
+    public Point[] getCorners() {
+      return corners;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+      super.paintComponent(g);
+      if (corners == null) return;
+      Graphics2D g2 = (Graphics2D) g;
+      g2.setColor(Color.RED);
+      g2.setStroke(new BasicStroke(2));
+
+      // Draw lines connecting the corners (with wrap-around)
+      for (int i = 0; i < corners.length; i++) {
+        Point p1 = corners[i];
+        Point p2 = corners[(i + 1) % corners.length];
+        g2.drawLine(p1.x, p1.y, p2.x, p2.y);
+      }
+
+      // Draw larger markers for the corners
+      for (Point corner : corners) {
+        if (mousePoint != null && mousePoint.distance(corner) < DRAG_THRESHOLD) {
+          g2.setColor(Color.CYAN);
+        } else {
+          g2.setColor(Color.RED);
+        }
+        // Draw a circle centered at the corner with a diameter of 12
+        g2.fillOval(corner.x - MARKER_RADIUS, corner.y - MARKER_RADIUS, MARKER_RADIUS * 2, MARKER_RADIUS * 2);
+      }
     }
   }
 
-
-  public ArrayList<Line> getLines() {
-    return drawingPanel.getLines();
+  /**
+   * Optionally, if needed for external usage.
+   */
+  public Point[] getCorners() {
+    return drawingPanel.getCorners();
   }
 }

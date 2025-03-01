@@ -11,8 +11,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Main {
-  private static final String INPUT_FOLDER = "C:\\Users\\Joonas\\Desktop\\Paul\\test";
-  private static final String OUTPUT_FOLDER = "C:\\Users\\Joonas\\Desktop\\Paul\\test\\transcription-output";
+  private static final String INPUT_FOLDER = "C:\\Users\\Joonas\\Desktop\\Paul\\1raamat";
+  private static final String OUTPUT_FOLDER = "C:\\Users\\Joonas\\Desktop\\Paul\\1raamat\\transcription-output";
   private static final String[] ACCEPT_FILES = new String[]{"jpg"};
 
   public static void main(String[] args) throws IOException, InterruptedException, InvocationTargetException {
