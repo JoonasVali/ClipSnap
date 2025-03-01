@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
+import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 
@@ -59,7 +60,7 @@ public class ApplicationUI extends JFrame {
     setLocationRelativeTo(null); // Center the frame
     setVisible(true);
 
-    imagePanel.refreshIcon();
+    imagePanel.refreshIcon(loadedImage.getWidth(), loadedImage.getHeight());
   }
 
   private void initComponents() {
@@ -115,7 +116,9 @@ public class ApplicationUI extends JFrame {
       bar.setValue(5); // Dummy value to show progress bar is working
 
       ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
-      BufferedImage[] images = ImageCutter.cutImage(loadedImage, (Integer) zoomLevel.getValue(), 50);
+      var points = imagePanel.getOriginalCropCoordinates();
+      BufferedImage croppedImage = CutImageUtil.cutImage(loadedImage, points);
+      BufferedImage[] images = ImageCutter.cutImage(croppedImage, (Integer) zoomLevel.getValue(), 50);
 
       Consumer<Float> listener = progress -> {
         SwingUtilities.invokeLater(() -> bar.setValue((int) (progress * 100)));
@@ -356,7 +359,7 @@ public class ApplicationUI extends JFrame {
     prevButton.setEnabled(currentIndex > 0);
     nextButton.setEnabled(currentIndex < paths.length - 1);
 
-    imagePanel.refreshIcon();
+    imagePanel.refreshIcon(loadedImage.getWidth(), loadedImage.getHeight());
   }
 
   private BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
