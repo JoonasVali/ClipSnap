@@ -13,8 +13,11 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.prefs.Preferences; // Added import
 
 public class ImageContentPanel extends JPanel {
+  private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex"; // Preference key
+
   private Path[] paths;
   private int currentIndex = 0;
 
@@ -39,7 +42,16 @@ public class ImageContentPanel extends JPanel {
   public ImageContentPanel(TranscriptionHints hints, Path[] paths, Path outputFolder, Runnable switchToSettingsAction) {
     this.hints = hints;
     this.paths = paths;
+
     this.outputFolder = outputFolder;
+    // Load last image index from preferences
+    Preferences prefs = Preferences.userNodeForPackage(ImageContentPanel.class);
+    currentIndex = prefs.getInt(getPrefKeyLastImageIndex(), 0);
+    // Validate index: if stored index is out of bounds, revert to 0.
+    if (currentIndex < 0 || currentIndex >= paths.length) {
+      currentIndex = 0;
+    }
+
     this.switchToSettingsAction = switchToSettingsAction;
     this.fileHandler = new FileHandler(outputFolder);
 
@@ -70,7 +82,6 @@ public class ImageContentPanel extends JPanel {
     topPanel.add(topLeftPanel, BorderLayout.WEST);
     topPanel.add(topMiddlePanel, BorderLayout.CENTER);
     topPanel.add(topRightPanel, BorderLayout.EAST);
-
 
     // Top panel components
     SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
@@ -138,6 +149,11 @@ public class ImageContentPanel extends JPanel {
     );
 
     updateDisplay();
+  }
+
+  public String getPrefKeyLastImageIndex() {
+    System.out.println(PREF_KEY_LAST_IMAGE_INDEX_BASE + ":" + outputFolder);
+    return PREF_KEY_LAST_IMAGE_INDEX_BASE + ":" + outputFolder;
   }
 
   private void performTranscription(JSpinner zoomLevel) {
@@ -213,6 +229,7 @@ public class ImageContentPanel extends JPanel {
         if (option == JOptionPane.YES_OPTION) saveContent();
       }
       currentIndex--;
+      storeCurrentImageIndex(); // Save the updated index
       inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
       calculateFileOutputPath();
       loadContent();
@@ -232,6 +249,7 @@ public class ImageContentPanel extends JPanel {
         if (option == JOptionPane.YES_OPTION) saveContent();
       }
       currentIndex++;
+      storeCurrentImageIndex(); // Save the updated index
       inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
       calculateFileOutputPath();
       loadContent();
@@ -239,6 +257,11 @@ public class ImageContentPanel extends JPanel {
       imagePanel.resetCropRectangle();
       updateDisplay();
     }
+  }
+
+  private void storeCurrentImageIndex() {
+    Preferences prefs = Preferences.userNodeForPackage(ImageContentPanel.class);
+    prefs.putInt(getPrefKeyLastImageIndex(), currentIndex);
   }
 
   private void loadImage() {
