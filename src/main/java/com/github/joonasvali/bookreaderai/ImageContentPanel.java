@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai;
 
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
+import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
 import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 
@@ -13,10 +14,11 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.function.Consumer;
-import java.util.prefs.Preferences; // Added import
+import java.util.prefs.Preferences;
 
 public class ImageContentPanel extends JPanel {
   private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex"; // Preference key
+  public static final String PREF_KEY_ROTATION_BASE = "rotation"; // Preference key
 
   private Path[] paths;
   private int currentIndex = 0;
@@ -28,6 +30,7 @@ public class ImageContentPanel extends JPanel {
   private JButton saveButton;
   private JButton settingsButton;
   private BufferedImage loadedImage;
+  private BufferedImage originalImage; // Store the unrotated image
   private ImagePanel imagePanel;
   private JProgressBar bar;
   private final Path outputFolder;
@@ -55,12 +58,9 @@ public class ImageContentPanel extends JPanel {
     this.switchToSettingsAction = switchToSettingsAction;
     this.fileHandler = new FileHandler(outputFolder);
 
-    try {
-      loadedImage = ImageIO.read(paths[currentIndex].toFile());
-      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    // Use the helper method to load the image (which also applies rotation)
+    inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
+    loadImage();
 
     initComponents();
     calculateFileOutputPath();
@@ -92,6 +92,12 @@ public class ImageContentPanel extends JPanel {
     bar = new JProgressBar();
 
     topLeftPanel.add(settingsButton);
+
+    // Add rotate button to the top panel
+    JButton rotateButton = new JButton("Rotate");
+    topLeftPanel.add(rotateButton);
+    rotateButton.addActionListener(e -> rotateImage());
+
     topMiddlePanel.add(zoomLevel);
     topMiddlePanel.add(askButton);
     topMiddlePanel.add(bar);
@@ -152,8 +158,12 @@ public class ImageContentPanel extends JPanel {
   }
 
   public String getPrefKeyLastImageIndex() {
-    System.out.println(PREF_KEY_LAST_IMAGE_INDEX_BASE + ":" + outputFolder);
-    return PREF_KEY_LAST_IMAGE_INDEX_BASE + ":" + outputFolder;
+    return PREF_KEY_LAST_IMAGE_INDEX_BASE + ":" + outputFolder.toString().hashCode();
+  }
+
+  // New method to build the preference key for rotation based on outputFolder and file name.
+  private String getRotationPrefKey() {
+    return PREF_KEY_ROTATION_BASE + ":" + outputFolder.toString().hashCode() + ":" + getFileNameWithoutSuffix(paths[currentIndex]).hashCode();
   }
 
   private void performTranscription(JSpinner zoomLevel) {
@@ -264,9 +274,14 @@ public class ImageContentPanel extends JPanel {
     prefs.putInt(getPrefKeyLastImageIndex(), currentIndex);
   }
 
+  // Modified loadImage: reads the image from disk into originalImage,
+  // then applies any stored rotation before assigning to loadedImage.
   private void loadImage() {
     try {
-      loadedImage = ImageIO.read(paths[currentIndex].toFile());
+      originalImage = ImageIO.read(paths[currentIndex].toFile());
+      Preferences prefs = Preferences.userNodeForPackage(ImageContentPanel.class);
+      int rotation = prefs.getInt(getRotationPrefKey(), 0);
+      loadedImage = RotateImageUtil.applyRotation(originalImage, rotation);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -315,5 +330,17 @@ public class ImageContentPanel extends JPanel {
     g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
     g2d.dispose();
     return resizedImage;
+  }
+
+  // Called when the Rotate button is pressed.
+  // Increments the rotation (modulo 4), saves it into preferences,
+  // applies it on the in-memory image, and updates the display.
+  private void rotateImage() {
+    Preferences prefs = Preferences.userNodeForPackage(ImageContentPanel.class);
+    int currentRotation = prefs.getInt(getRotationPrefKey(), 0);
+    int newRotation = (currentRotation + 1) % 4;
+    prefs.putInt(getRotationPrefKey(), newRotation);
+    loadedImage = RotateImageUtil.applyRotation(originalImage, newRotation);
+    updateDisplay();
   }
 }
