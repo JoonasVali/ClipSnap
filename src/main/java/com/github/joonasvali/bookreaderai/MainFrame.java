@@ -30,8 +30,12 @@ public class MainFrame extends JFrame {
         Path[] imagePaths = sortByName(listInputFolderContent(selectedFolder));
         // Determine output folder for transcriptions
         Path outputFolder = selectedFolder.resolve("transcription-output");
+        TranscriptionHints hints = new TranscriptionHints(
+            settingsPanel.getLanguage().trim().isEmpty() ? null : settingsPanel.getLanguage(),
+            settingsPanel.getStory()
+        );
         // Create a new image panel
-        ImageContentPanel imagePanel = new ImageContentPanel(imagePaths, outputFolder, this::switchPanelToSettingPanel);
+        ImageContentPanel imagePanel = new ImageContentPanel(hints, imagePaths, outputFolder, this::switchPanelToSettingPanel);
         // Switch to the new image panel
         switchPanelToImagePanel(imagePanel);
       } catch (IOException e) {

@@ -32,7 +32,7 @@ public class SimpleTranscriberAgent {
     } else {
       this.languageDirection = "";
     }
-    this.story = story;
+    this.story = story + " ";
     this.useFixerAgent = useFixerAgent;
     this.language = language;
   }

@@ -1,25 +1,31 @@
 package com.github.joonasvali.bookreaderai;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class SettingsPanel extends JPanel {
+
+  public static final String DEFAULT_STORY = "This story is historical from around ww2.";
+  public static final String DEFAULT_LANGUAGE = "estonian";
+  public static final String STORY_KEY = "story";
 
   private JLabel apiKeyStatusLabel;
   private JTextField folderPathField;
   private JButton chooseFolderButton;
   private JLabel folderErrorLabel;
   private JButton continueButton;
+
+  // New fields
+  private JTextField languageField;
+  private JTextField storyField;
 
   private Preferences preferences;
   private final Consumer<Path> continueAction;
@@ -36,8 +42,8 @@ public class SettingsPanel extends JPanel {
     JPanel topPanel = createApiKeyPanel();
     add(topPanel, BorderLayout.NORTH);
 
-    // Center Panel: Folder Selection
-    JPanel centerPanel = createFolderPanel();
+    // Center Panel: Folder Selection + Language/Topic fields
+    JPanel centerPanel = createCenterPanel();
     add(centerPanel, BorderLayout.CENTER);
 
     // Bottom Panel: Continue Button
@@ -75,24 +81,24 @@ public class SettingsPanel extends JPanel {
   }
 
   /**
-   * Creates the center panel for folder selection, using a GridBagLayout
-   * for a more controlled layout.
+   * Creates the center panel for folder selection, Language, and Topic,
+   * using a GridBagLayout for a more controlled layout.
    */
-  private JPanel createFolderPanel() {
+  private JPanel createCenterPanel() {
     JPanel panel = new JPanel(new GridBagLayout());
-    panel.setBorder(BorderFactory.createTitledBorder("Folder Settings"));
+    panel.setBorder(BorderFactory.createTitledBorder("Settings"));
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(5, 5, 5, 5);
 
-    // 1) Label: "Input Folder"
+    // --- ROW 0: Folder label, text field, and button ---
     JLabel folderLabel = new JLabel("Input Folder:");
     gbc.gridx = 0;
     gbc.gridy = 0;
     gbc.weightx = 0;
+    gbc.gridwidth = 1;
     panel.add(folderLabel, gbc);
 
-    // 2) Text field for folder path
     folderPathField = new JTextField(20);
     folderPathField.setEditable(false);
     folderPathField.setText(preferences.get("inputFolder", ""));
@@ -101,7 +107,6 @@ public class SettingsPanel extends JPanel {
     gbc.weightx = 1;
     panel.add(folderPathField, gbc);
 
-    // 3) "Choose Folder" button
     chooseFolderButton = new JButton("Choose Folder");
     chooseFolderButton.addActionListener(new ActionListener() {
       @Override
@@ -114,7 +119,7 @@ public class SettingsPanel extends JPanel {
     gbc.weightx = 0;
     panel.add(chooseFolderButton, gbc);
 
-    // 4) Folder error label (spans the width)
+    // --- ROW 1: Folder error label (spans all columns) ---
     folderErrorLabel = new JLabel("");
     folderErrorLabel.setForeground(Color.RED);
     gbc.gridx = 0;
@@ -122,6 +127,50 @@ public class SettingsPanel extends JPanel {
     gbc.gridwidth = 3;
     gbc.weightx = 1;
     panel.add(folderErrorLabel, gbc);
+
+    // Reset gridwidth for subsequent rows
+    gbc.gridwidth = 1;
+
+    // --- ROW 2: Language label and field ---
+    JLabel languageLabel = new JLabel("Language:");
+    gbc.gridx = 0;
+    gbc.gridy = 2;
+    gbc.weightx = 0;
+    panel.add(languageLabel, gbc);
+
+    languageField = new JTextField(20);
+    languageField.setText(preferences.get("language", DEFAULT_LANGUAGE)); // Load from preferences
+    // Save to preferences whenever text changes
+    languageField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
+        preferences.put("language", languageField.getText())
+    ));
+    gbc.gridx = 1;
+    gbc.gridy = 2;
+    gbc.weightx = 1;
+    gbc.gridwidth = 2;
+    panel.add(languageField, gbc);
+
+    // Reset gridwidth
+    gbc.gridwidth = 1;
+
+    // --- ROW 3: Topic label and field ---
+    JLabel topicLabel = new JLabel("Topic:");
+    gbc.gridx = 0;
+    gbc.gridy = 3;
+    gbc.weightx = 0;
+    panel.add(topicLabel, gbc);
+
+    storyField = new JTextField(20);
+    storyField.setText(preferences.get(STORY_KEY, DEFAULT_STORY)); // Load from preferences
+    // Save to preferences whenever text changes
+    storyField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
+        preferences.put(STORY_KEY, storyField.getText())
+    ));
+    gbc.gridx = 1;
+    gbc.gridy = 3;
+    gbc.weightx = 1;
+    gbc.gridwidth = 2;
+    panel.add(storyField, gbc);
 
     return panel;
   }
@@ -132,8 +181,9 @@ public class SettingsPanel extends JPanel {
   private JPanel createBottomPanel() {
     JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
     continueButton = new JButton("Continue");
-    continueButton.addActionListener(e -> continueAction.accept(Path.of(folderPathField.getText())));
-    // Initially disabled, will be enabled if folder is valid
+    continueButton.addActionListener(e -> {
+      continueAction.accept(Path.of(folderPathField.getText()));
+    });
     continueButton.setEnabled(false);
     panel.add(continueButton);
     return panel;
@@ -176,4 +226,37 @@ public class SettingsPanel extends JPanel {
     return jpgFiles != null && jpgFiles.length > 0;
   }
 
+  public String getLanguage() {
+    return languageField.getText();
+  }
+
+  public String getStory() {
+    return storyField.getText();
+  }
+
+  /**
+   * A small helper DocumentListener that invokes a Runnable whenever the text changes.
+   */
+  private static class SimpleDocumentListener implements javax.swing.event.DocumentListener {
+    private final Runnable onChange;
+
+    public SimpleDocumentListener(Runnable onChange) {
+      this.onChange = onChange;
+    }
+
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+      onChange.run();
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+      onChange.run();
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+      onChange.run();
+    }
+  }
 }

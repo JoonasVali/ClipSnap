@@ -32,10 +32,12 @@ public class ImageContentPanel extends JPanel {
   private final FileHandler fileHandler;
   private String inputFileName;
   private Runnable switchToSettingsAction;
+  private final TranscriptionHints hints;
 
   private Timer resizeTimer;  // For debouncing resize events
 
-  public ImageContentPanel(Path[] paths, Path outputFolder, Runnable switchToSettingsAction) {
+  public ImageContentPanel(TranscriptionHints hints, Path[] paths, Path outputFolder, Runnable switchToSettingsAction) {
+    this.hints = hints;
     this.paths = paths;
     this.outputFolder = outputFolder;
     this.switchToSettingsAction = switchToSettingsAction;
@@ -149,8 +151,7 @@ public class ImageContentPanel extends JPanel {
         bar.setValue((int) (progress * 100)));
     progressUpdateUtility.setListener(listener);
 
-    JoinedTranscriber transcriber = new JoinedTranscriber(images, "estonian",
-        "This story is historical from around ww2. ");
+    JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story());
     transcriber.setProgressUpdateUtility(progressUpdateUtility);
 
     try {
