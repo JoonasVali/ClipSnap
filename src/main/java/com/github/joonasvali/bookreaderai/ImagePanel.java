@@ -200,8 +200,8 @@ public class ImagePanel extends JLayeredPane {
       Point[] result = new Point[4];
       for (int i = 0; i < 4; i++) {
         // Subtract offset, then divide by scale
-        int originalX = (int) Math.round((corners[i].x - displayedImageX) / scale);
-        int originalY = (int) Math.round((corners[i].y - displayedImageY) / scale);
+        int originalX = Math.max(0, Math.min((int) Math.round((corners[i].x - displayedImageX) / scale), imageOriginalWidth - 1));
+        int originalY = Math.max(0, Math.min((int) Math.round((corners[i].y - displayedImageY) / scale), imageOriginalHeight - 1));
         result[i] = new Point(originalX, originalY);
       }
       return result;

@@ -118,7 +118,7 @@ public class ApplicationUI extends JFrame {
       ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
       var points = imagePanel.getOriginalCropCoordinates();
       BufferedImage croppedImage = CutImageUtil.cutImage(loadedImage, points);
-      BufferedImage[] images = ImageCutter.cutImage(croppedImage, (Integer) zoomLevel.getValue(), 50);
+      BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), 50);
 
       Consumer<Float> listener = progress -> {
         SwingUtilities.invokeLater(() -> bar.setValue((int) (progress * 100)));
