@@ -3,12 +3,6 @@ package com.github.joonasvali.bookreaderai.transcribe;
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.TextJoiner;
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.ChatCompletion;
-import com.openai.models.ChatCompletionCreateParams;
-import com.openai.models.ChatModel;
-import com.openai.models.CompletionUsage;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;

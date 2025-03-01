@@ -4,7 +4,6 @@ import com.github.joonasvali.bookreaderai.openai.ImageAnalysis;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 public class SimpleTranscriberAgent {
