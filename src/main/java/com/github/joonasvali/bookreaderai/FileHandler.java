@@ -3,17 +3,16 @@ package com.github.joonasvali.bookreaderai;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class FileHandler {
-  private final String outputFolder;
+  private final Path outputFolder;
 
-  public FileHandler(String outputFolder) {
+  public FileHandler(Path outputFolder) {
     this.outputFolder = outputFolder;
   }
 
   public Path getFilePath(String fileNameBody) {
-    return Paths.get(outputFolder, fileNameBody + ".txt");
+    return outputFolder.resolve(fileNameBody + ".txt");
   }
 
   public void saveToFile(String fileNameBody, String content) throws IOException {
