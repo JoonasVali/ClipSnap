@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai;
 
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
+import com.github.joonasvali.bookreaderai.imageutil.PerspectiveImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
 import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
@@ -38,6 +39,8 @@ public class ImageContentPanel extends JPanel {
   private JButton saveButton;
   private JButton settingsButton;
   private JButton produceFinalResultButton;
+  private JCheckBox normalizePerspectiveCheckBox;
+
   private BufferedImage loadedImage;
   private BufferedImage originalImage;
   private ImagePanel imagePanel;
@@ -49,6 +52,7 @@ public class ImageContentPanel extends JPanel {
   private final TranscriptionHints hints;
   private boolean hasAPIKey = true;
   private FinalResultManager finalResultManager;
+  private boolean normalizePerspective = true;
 
   private Timer resizeTimer;  // For debouncing resize events
 
@@ -115,6 +119,11 @@ public class ImageContentPanel extends JPanel {
     askButton.setEnabled(hasAPIKey);
     bar = new JProgressBar();
 
+    normalizePerspectiveCheckBox = new JCheckBox("Normalize Perspective", normalizePerspective);
+    normalizePerspectiveCheckBox.addChangeListener((e) -> {
+      normalizePerspective = normalizePerspectiveCheckBox.isSelected();
+    });
+
     topLeftPanel.add(settingsButton);
 
     // Add rotate button to the top panel
@@ -122,6 +131,7 @@ public class ImageContentPanel extends JPanel {
     topLeftPanel.add(rotateButton);
     rotateButton.addActionListener(e -> rotateImage());
 
+    topMiddlePanel.add(normalizePerspectiveCheckBox);
     topMiddlePanel.add(new JLabel("Detail level:"));
     topMiddlePanel.add(zoomLevel);
     topMiddlePanel.add(askButton);
@@ -209,7 +219,18 @@ public class ImageContentPanel extends JPanel {
     bar.setValue(DUMMY_PROGRESS);
     ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
     var points = imagePanel.getOriginalCropCoordinates();
-    BufferedImage croppedImage = CutImageUtil.cutImage(loadedImage, points);
+
+    BufferedImage croppedImage = loadedImage;
+    if (!PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
+      if (normalizePerspective) {
+        logger.info("Bounds: Using normalized perspective");
+        croppedImage = PerspectiveImageUtil.normalizeImageToRectangle(loadedImage, points);
+      } else {
+        logger.info("Bounds: Using cropped image");
+        croppedImage = CutImageUtil.cutImage(loadedImage, points);
+      }
+    }
+
     BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
@@ -224,9 +245,8 @@ public class ImageContentPanel extends JPanel {
         LineBreaker lineBreaker = new LineBreaker();
         String text = lineBreaker.lineBreakAfterEvery(result.text(), LINE_BREAK_CHARS);
 
-        if (originalImage.getWidth() == croppedImage.getWidth() &&
-            originalImage.getHeight() == croppedImage.getHeight()) {
-          // When the crop is the same size as the original image, overwrite the text result.
+        if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
+          // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
           textArea.setText(text);
         } else {
           // If user has selected text, replace that selection; otherwise, append the transcription result.
