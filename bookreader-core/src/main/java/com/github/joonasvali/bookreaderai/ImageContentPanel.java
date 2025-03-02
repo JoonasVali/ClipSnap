@@ -40,6 +40,7 @@ public class ImageContentPanel extends JPanel {
   private JButton settingsButton;
   private JButton produceFinalResultButton;
   private JCheckBox normalizePerspectiveCheckBox;
+  private JLabel counterLabel;
 
   private BufferedImage loadedImage;
   private BufferedImage originalImage;
@@ -164,6 +165,10 @@ public class ImageContentPanel extends JPanel {
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
     produceFinalResultButton = new JButton("Finish");
+
+    // Create and initialize the counter label
+    counterLabel = new JLabel((currentIndex + 1) + "/" + paths.length);
+    bottomLeftPanel.add(counterLabel);
 
     bottomMiddlePanel.add(prevButton);
     bottomMiddlePanel.add(nextButton);
@@ -373,6 +378,8 @@ public class ImageContentPanel extends JPanel {
     int labelWidth = imageLabel.getWidth();
     int labelHeight = imageLabel.getHeight();
     if (labelWidth <= 0 || labelHeight <= 0) return;
+
+    counterLabel.setText((currentIndex + 1) + "/" + paths.length);
 
     int imgWidth = loadedImage.getWidth();
     int imgHeight = loadedImage.getHeight();
