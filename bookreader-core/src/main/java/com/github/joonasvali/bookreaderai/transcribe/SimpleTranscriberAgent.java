@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 public class SimpleTranscriberAgent {
@@ -44,23 +45,11 @@ public class SimpleTranscriberAgent {
   public CompletableFuture<ProcessingResult<String>> transcribe() {
     return CompletableFuture.supplyAsync(() -> {
       try {
-        ImageAnalysis imageAnalysis = new ImageAnalysis(SYSTEM_PROMPT
-            .replace("${LANGUAGE}", languageDirection)
-            .replace("${STORY}", story)
-        );
-        ProcessingResult<String> result = imageAnalysis.process(bufferedImage);
+        ImageAnalysis imageAnalysis = createImageAnalysis();
+        ProcessingResult<String> result = processImage(imageAnalysis);
 
-        ProcessingResult<String> fixedResult = null;
         if (useFixerAgent) {
-          TranscribeFixerAgent fixerAgent = new TranscribeFixerAgent(language, story);
-          fixedResult = fixerAgent.fix(result.text());
-
-          return new ProcessingResult<String>(
-              fixedResult.text(),
-              result.promptTokens() + fixedResult.promptTokens(),
-              result.completionTokens() + fixedResult.completionTokens(),
-              result.totalTokens() + fixedResult.totalTokens()
-          );
+          return fixTranscriptionResult(result);
         } else {
           return result;
         }
@@ -71,4 +60,26 @@ public class SimpleTranscriberAgent {
     });
   }
 
+  private ImageAnalysis createImageAnalysis() {
+    return new ImageAnalysis(SYSTEM_PROMPT
+        .replace("${LANGUAGE}", languageDirection)
+        .replace("${STORY}", story)
+    );
+  }
+
+  private ProcessingResult<String> processImage(ImageAnalysis imageAnalysis) throws IOException {
+    return imageAnalysis.process(bufferedImage);
+  }
+
+  private ProcessingResult<String> fixTranscriptionResult(ProcessingResult<String> result) {
+    TranscribeFixerAgent fixerAgent = new TranscribeFixerAgent(language, story);
+    ProcessingResult<String> fixedResult = fixerAgent.fix(result.text());
+
+    return new ProcessingResult<>(
+        fixedResult.text(),
+        result.promptTokens() + fixedResult.promptTokens(),
+        result.completionTokens() + fixedResult.completionTokens(),
+        result.totalTokens() + fixedResult.totalTokens()
+    );
+  }
 }

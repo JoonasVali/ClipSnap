@@ -6,4 +6,5 @@ module bookreader.core {
   requires openai.java.core;
   requires org.json;
   requires org.slf4j;
+  requires ch.qos.logback.classic;
 }
