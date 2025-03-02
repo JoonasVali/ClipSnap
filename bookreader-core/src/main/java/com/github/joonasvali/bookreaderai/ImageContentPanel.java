@@ -8,9 +8,11 @@ import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -125,6 +127,17 @@ public class ImageContentPanel extends JPanel {
 
     textArea = new JTextArea();
     textArea.setEditable(true);
+
+    DefaultCaret persistentCaret = new DefaultCaret() {
+      @Override
+      public void focusLost(FocusEvent e) {
+        // Do not call super.focusLost(e) so that the selection remains visible.
+      }
+    };
+    textArea.setCaret(persistentCaret);
+    persistentCaret.setBlinkRate(textArea.getCaret().getBlinkRate());
+    persistentCaret.setSelectionVisible(true);
+
     JScrollPane textScrollPane = new JScrollPane(textArea);
     centerPanel.add(textScrollPane);
 
@@ -199,13 +212,18 @@ public class ImageContentPanel extends JPanel {
         LineBreaker lineBreaker = new LineBreaker();
         String text = lineBreaker.lineBreakAfterEvery(result.text(), LINE_BREAK_CHARS);
 
-        if (originalImage.getWidth() == croppedImage.getWidth() && originalImage.getHeight() == croppedImage.getHeight()) {
-          // In case the crop is the same size as the original image, we just overwrite the text result
+        if (originalImage.getWidth() == croppedImage.getWidth() &&
+            originalImage.getHeight() == croppedImage.getHeight()) {
+          // When the crop is the same size as the original image, overwrite the text result.
           textArea.setText(text);
         } else {
-          // Otherwise, we append the text result to the existing text
-          textArea.append("\n\n");
-          textArea.append(text);
+          // If user has selected text, replace that selection; otherwise, append the transcription result.
+          String selectedText = textArea.getSelectedText();
+          if (selectedText != null && !selectedText.isEmpty()) {
+            textArea.replaceSelection(text);
+          } else {
+            textArea.append("\n\n" + text);
+          }
         }
 
         progressUpdateUtility.removeListener(listener);
