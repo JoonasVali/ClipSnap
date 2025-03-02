@@ -2,12 +2,22 @@
 
 # SnapRead
 
+⚠️ Caution
+
+I put this project together quickly over a weekend (with a fair bit of AI help), so it’s still in its early stages and 
+mostly untested. I originally built it for a specific need, but figured it might be useful to others too—so I’m sharing 
+it. That said, expect some rough edges, and use it with caution!
+
 ## Introduction
 
 SnapRead is an AI powered image to text (OCR) tool. It helps you to extract text from a series of images.
 The tool is built with human in the loop approach, where human can select a specific region of the image to extract 
 text from and move to next image. This enables to quickly digitize text from photos made by phone, without needing 
 pre-processing or cropping the image, making it easy to digitalize books or any other printed material.
+
+### Demo video
+
+[Demo video here](https://www.youtube.com/watch?v=r5gmmUtWGlY)
 
 ### Running the tool
 
