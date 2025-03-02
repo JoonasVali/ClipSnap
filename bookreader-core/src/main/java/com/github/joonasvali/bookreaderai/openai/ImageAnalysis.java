@@ -16,7 +16,10 @@ import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 /*
- * The official OpenAI API client does not allow sending images, so this is a temporary workaround.
+ * The official OpenAI API client does not allow sending images, so this is a temporary workaround
+ * to get image recognition.
+ *
+ * https://github.com/openai/openai-java/issues/191
  *
  * This class is responsible for sending an image to OpenAI's API and receiving a text response.
  *
@@ -96,9 +99,9 @@ public class ImageAnalysis {
 
   public static String sendRequestToOpenAI(JSONObject jsonBody) throws IOException {
     OkHttpClient client = new OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS) // Increase connect timeout
-        .writeTimeout(120, TimeUnit.SECONDS)   // Increase write timeout
-        .readTimeout(120, TimeUnit.SECONDS)    // Increase read timeout
+        .connectTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
         .build();
 
     RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json"));

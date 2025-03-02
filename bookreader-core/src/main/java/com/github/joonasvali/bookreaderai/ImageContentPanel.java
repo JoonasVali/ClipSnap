@@ -17,8 +17,8 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class ImageContentPanel extends JPanel {
-  private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex"; // Preference key
-  public static final String PREF_KEY_ROTATION_BASE = "rotation"; // Preference key
+  private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex";
+  public static final String PREF_KEY_ROTATION_BASE = "rotation";
 
   private Path[] paths;
   private int currentIndex = 0;

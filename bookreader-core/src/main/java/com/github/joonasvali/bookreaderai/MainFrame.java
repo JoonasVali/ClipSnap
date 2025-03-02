@@ -8,14 +8,18 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 public class MainFrame extends JFrame {
+  public static final String TITLE = "SnapRead by Joonas Vali, 2025";
   public static final String[] ACCEPT_FILES = new String[] { "jpg" };
+  public static final String SETTINGS_PANEL_KEY = "SETTINGS_PANEL";
+  public static final String IMAGE_PANEL_KEY = "IMAGE_PANEL";
+  public static final String TRANSCRIPTION_OUTPUT_FOLDER = "transcription-output";
 
   private CardLayout cardLayout;
   private JPanel contentContainer;
   private SettingsPanel settingsPanel;
 
   public MainFrame() {
-    setTitle("My Application");
+    setTitle(TITLE);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setPreferredSize(new Dimension(1600, 1000));
 
@@ -29,7 +33,7 @@ public class MainFrame extends JFrame {
         // List and sort image files from the selected folder
         Path[] imagePaths = sortByName(listInputFolderContent(selectedFolder));
         // Determine output folder for transcriptions
-        Path outputFolder = selectedFolder.resolve("transcription-output");
+        Path outputFolder = selectedFolder.resolve(TRANSCRIPTION_OUTPUT_FOLDER);
         TranscriptionHints hints = new TranscriptionHints(
             settingsPanel.getLanguage().trim().isEmpty() ? null : settingsPanel.getLanguage(),
             settingsPanel.getStory()
@@ -49,7 +53,7 @@ public class MainFrame extends JFrame {
     });
 
     // Add the settings panel to the container
-    contentContainer.add(settingsPanel, "SETTINGS_PANEL");
+    contentContainer.add(settingsPanel, SETTINGS_PANEL_KEY);
 
     // Add the container to the frame
     getContentPane().add(contentContainer);
@@ -75,18 +79,18 @@ public class MainFrame extends JFrame {
       }
     }
     // Add the new image panel with a specific name
-    contentContainer.add(panel, "IMAGE_PANEL");
+    contentContainer.add(panel, IMAGE_PANEL_KEY);
     contentContainer.revalidate();
     contentContainer.repaint();
     // Show the image panel card
-    cardLayout.show(contentContainer, "IMAGE_PANEL");
+    cardLayout.show(contentContainer, IMAGE_PANEL_KEY);
   }
 
   /**
    * Switches back to the settings panel.
    */
   public void switchPanelToSettingPanel() {
-    cardLayout.show(contentContainer, "SETTINGS_PANEL");
+    cardLayout.show(contentContainer, SETTINGS_PANEL_KEY);
   }
 
   /**

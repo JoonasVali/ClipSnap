@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.github.joonasvali.bookereaderai</groupId>
+    <artifactId>bookreader</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>build</artifactId>
+
+  <properties>
+    <asm.file>${basedir}/assembly/assembly.xml</asm.file>
+    <included>${basedir}/included</included>
+    <binfolder>${included}/bin</binfolder>
+    <configfolder>${included}/config</configfolder>
+    <rootdir>${project.parent.basedir}</rootdir>
+    <bookreader.core.target>${rootdir}/bookreader-core/target</bookreader.core.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <dist.jdk/>
+  </properties>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <!-- https://github.com/moditect/moditect -->
+        <!-- this plugin is responsible for generating module-infos inside dependencies, so we could jlink it -->
+        <groupId>org.moditect</groupId>
+        <artifactId>moditect-maven-plugin</artifactId>
+        <version>1.2.2.Final</version>
+        <executions>
+          <execution>
+            <id>create-runtime-image</id>
+            <phase>package</phase>
+            <goals>
+              <goal>create-runtime-image</goal>
+            </goals>
+            <configuration>
+              <!-- This would populate the jre/jars directory with app related jars which don't need. -->
+              <jarInclusionPolicy>NONE</jarInclusionPolicy>
+              <modules>
+                <module>java.base</module>
+                <module>java.desktop</module>
+                <module>java.naming</module>
+                <module>jdk.unsupported</module>
+              </modules>
+              <!-- You can use toolchain to build JVM image for different OS, just specify -Ddist.jdk=... in maven commands. -->
+              <!-- If this is not provided, default, current JVM is being distributed with the game. -->
+              <!-- https://maven.apache.org/guides/mini/guide-using-toolchains.html -->
+              <baseJdk>${dist.jdk}</baseJdk>
+              <outputDirectory>
+                ${project.build.directory}/SnapRead/SnapRead/jre
+              </outputDirectory>
+            </configuration>
+          </execution>
+
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.googlecode.mavennatives</groupId>
+        <artifactId>maven-nativedependencies-plugin</artifactId>
+        <version>0.0.5</version>
+        <executions>
+          <execution>
+            <id>unpacknatives</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <descriptors>
+            <descriptor>${asm.file}</descriptor>
+          </descriptors>
+
+          <finalName>SnapRead</finalName>
+          <appendAssemblyId>false</appendAssemblyId>
+        </configuration>
+
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <!-- this is used for inheritance merges -->
+            <phase>package</phase>
+            <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
