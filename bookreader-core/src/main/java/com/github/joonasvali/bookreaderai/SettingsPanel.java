@@ -12,9 +12,6 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class SettingsPanel extends JPanel {
-
-  public static final String DEFAULT_STORY = "This story is historical from around ww2.";
-  public static final String DEFAULT_LANGUAGE = "estonian";
   public static final String STORY_KEY = "story";
 
   private JLabel apiKeyStatusLabel;
@@ -23,6 +20,9 @@ public class SettingsPanel extends JPanel {
   private JLabel folderErrorLabel;
   private JButton continueButton;
 
+  private final String defaultLanguage;
+  private final String defaultStory;
+
   // New fields
   private JTextField languageField;
   private JTextField storyField;
@@ -30,7 +30,9 @@ public class SettingsPanel extends JPanel {
   private Preferences preferences;
   private final Consumer<Path> continueAction;
 
-  public SettingsPanel(Consumer<Path> continueAction) {
+  public SettingsPanel(String defaultStory, String defaultLanguage, Consumer<Path> continueAction) {
+    this.defaultLanguage = defaultLanguage;
+    this.defaultStory = defaultStory;
     this.continueAction = continueAction;
     preferences = Preferences.userNodeForPackage(SettingsPanel.class);
 
@@ -139,7 +141,7 @@ public class SettingsPanel extends JPanel {
     panel.add(languageLabel, gbc);
 
     languageField = new JTextField(20);
-    languageField.setText(preferences.get("language", DEFAULT_LANGUAGE)); // Load from preferences
+    languageField.setText(preferences.get("language", defaultLanguage));
     // Save to preferences whenever text changes
     languageField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
         preferences.put("language", languageField.getText())
@@ -161,7 +163,7 @@ public class SettingsPanel extends JPanel {
     panel.add(topicLabel, gbc);
 
     storyField = new JTextField(20);
-    storyField.setText(preferences.get(STORY_KEY, DEFAULT_STORY)); // Load from preferences
+    storyField.setText(preferences.get(STORY_KEY, defaultStory));
     // Save to preferences whenever text changes
     storyField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
         preferences.put(STORY_KEY, storyField.getText())

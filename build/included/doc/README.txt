@@ -1,2 +1,2 @@
-SnapRead Joonas Vali  (2025)
+SnapRead by Joonas Vali (2025)
 

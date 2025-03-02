@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Properties;
 
 public class MainFrame extends JFrame {
   public static final String TITLE = "SnapRead by Joonas Vali, 2025";
@@ -17,8 +18,9 @@ public class MainFrame extends JFrame {
   private CardLayout cardLayout;
   private JPanel contentContainer;
   private SettingsPanel settingsPanel;
+  private Properties properties;
 
-  public MainFrame() {
+  public MainFrame(Properties properties) {
     setTitle(TITLE);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setPreferredSize(new Dimension(1600, 1000));
@@ -28,7 +30,7 @@ public class MainFrame extends JFrame {
     contentContainer = new JPanel(cardLayout);
 
     // Create the settings panel with a callback that creates a new ImageContentPanel
-    settingsPanel = new SettingsPanel((Path selectedFolder) -> {
+    settingsPanel = new SettingsPanel(properties.getProperty("default.hint.story"), properties.getProperty("default.hint.language"), (Path selectedFolder) -> {
       try {
         // List and sort image files from the selected folder
         Path[] imagePaths = sortByName(listInputFolderContent(selectedFolder));
