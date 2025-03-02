@@ -1,4 +1,4 @@
-SnapRead by Joonas Vali (2025)
+ClipSnap by Joonas Vali (2025)
 
 ## Logging
 

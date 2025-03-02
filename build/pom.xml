@@ -53,7 +53,7 @@
               <!-- https://maven.apache.org/guides/mini/guide-using-toolchains.html -->
               <baseJdk>${dist.jdk}</baseJdk>
               <outputDirectory>
-                ${project.build.directory}/SnapRead/SnapRead/jre
+                ${project.build.directory}/ClipSnap/ClipSnap/jre
               </outputDirectory>
             </configuration>
           </execution>
@@ -83,7 +83,7 @@
             <descriptor>${asm.file}</descriptor>
           </descriptors>
 
-          <finalName>SnapRead</finalName>
+          <finalName>ClipSnap</finalName>
           <appendAssemblyId>false</appendAssemblyId>
         </configuration>
 

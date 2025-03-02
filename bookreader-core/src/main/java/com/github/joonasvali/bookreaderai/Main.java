@@ -13,7 +13,7 @@ public class Main {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Main.class);
   public static void main(String[] args) throws IOException, InterruptedException, InvocationTargetException {
     Properties properties = new Properties();
-    Path path = Path.of("snapread.properties").toAbsolutePath();
+    Path path = Path.of("clipsnap.properties").toAbsolutePath();
     if (Files.notExists(path)) {
       if (args.length > 0) {
         path = Path.of(args[0]).toAbsolutePath();

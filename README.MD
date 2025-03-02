@@ -1,6 +1,6 @@
 
 
-# SnapRead
+# ClipSnap
 
 ⚠️ Caution
 
@@ -10,7 +10,7 @@ it. That said, expect some rough edges, and use it with caution!
 
 ## Introduction
 
-SnapRead is an AI powered image to text (OCR) tool. It helps you to extract text from a series of images.
+ClipSnap is an AI powered image to text (OCR) tool. It helps you to extract text from a series of images.
 The tool is built with human in the loop approach, where human can select a specific region of the image to extract 
 text from and move to next image. This enables to quickly digitize text from photos made by phone, without needing 
 pre-processing or cropping the image, making it easy to digitalize books or any other printed material.
@@ -28,5 +28,5 @@ environment variable.
 
 Building this tool requires Java 23+ and Maven
 
-Type `mvn clean package` to build. The tool is built into the `build/target/SnapRead/` directory
+Type `mvn clean package` to build. The tool is built into the `build/target/ClipSnap/` directory
 
