@@ -17,7 +17,7 @@ pre-processing or cropping the image, making it easy to digitalize books or any 
 
 ### Demo video
 
-[Demo video here](https://www.youtube.com/watch?v=r5gmmUtWGlY)
+[Demo video here](https://www.youtube.com/watch?v=HCkb1d2wkzk)
 
 ### Running the tool
 
