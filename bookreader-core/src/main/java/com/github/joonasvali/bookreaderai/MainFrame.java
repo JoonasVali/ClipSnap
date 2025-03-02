@@ -1,5 +1,7 @@
 package com.github.joonasvali.bookreaderai;
 
+import org.slf4j.Logger;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
@@ -9,8 +11,10 @@ import java.util.Arrays;
 import java.util.Properties;
 
 public class MainFrame extends JFrame {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(MainFrame.class);
+
   public static final String TITLE = "SnapRead by Joonas Vali, 2025";
-  public static final String[] ACCEPT_FILES = new String[] { "jpg" };
+  public static final String[] ACCEPT_FILES = new String[]{"jpg"};
   public static final String SETTINGS_PANEL_KEY = "SETTINGS_PANEL";
   public static final String IMAGE_PANEL_KEY = "IMAGE_PANEL";
   public static final String TRANSCRIPTION_OUTPUT_FOLDER = "transcription-output";
@@ -18,7 +22,6 @@ public class MainFrame extends JFrame {
   private CardLayout cardLayout;
   private JPanel contentContainer;
   private SettingsPanel settingsPanel;
-  private Properties properties;
 
   public MainFrame(Properties properties) {
     setTitle(TITLE);
@@ -30,7 +33,11 @@ public class MainFrame extends JFrame {
     contentContainer = new JPanel(cardLayout);
 
     // Create the settings panel with a callback that creates a new ImageContentPanel
-    settingsPanel = new SettingsPanel(properties.getProperty("default.hint.story"), properties.getProperty("default.hint.language"), (Path selectedFolder) -> {
+    settingsPanel = new SettingsPanel(
+        new TranscriptionHints(
+            properties.getProperty("default.hint.language"),
+            properties.getProperty("default.hint.story")
+        ), (Path selectedFolder) -> {
       try {
         // List and sort image files from the selected folder
         Path[] imagePaths = sortByName(listInputFolderContent(selectedFolder));

@@ -1,10 +1,14 @@
 package com.github.joonasvali.bookreaderai;
 
+import org.slf4j.Logger;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Arrays;
 
 public class ImagePanel extends JLayeredPane {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(ImagePanel.class);
   private final JLabel imageLabel;
   private final DrawingPanel drawingPanel;
   // Actual full size of the source image in pixels
@@ -203,6 +207,9 @@ public class ImagePanel extends JLayeredPane {
         int originalX = Math.max(0, Math.min((int) Math.round((corners[i].x - displayedImageX) / scale), imageOriginalWidth - 1));
         int originalY = Math.max(0, Math.min((int) Math.round((corners[i].y - displayedImageY) / scale), imageOriginalHeight - 1));
         result[i] = new Point(originalX, originalY);
+      }
+      if (logger.isDebugEnabled()) {
+        logger.debug("Got original crop coordinates: {}", Arrays.deepToString(result));
       }
       return result;
     }

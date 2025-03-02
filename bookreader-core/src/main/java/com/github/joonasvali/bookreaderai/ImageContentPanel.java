@@ -4,6 +4,7 @@ import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
 import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
+import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -17,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class ImageContentPanel extends JPanel {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(ImageContentPanel.class);
   private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex";
   public static final String PREF_KEY_ROTATION_BASE = "rotation";
 
@@ -188,6 +190,7 @@ public class ImageContentPanel extends JPanel {
         bar.setValue(0);
       });
     } catch (IOException ex) {
+      logger.error("Unable to complete transcription for " + inputFileName, ex);
       throw new RuntimeException(ex);
     }
   }
@@ -197,6 +200,7 @@ public class ImageContentPanel extends JPanel {
       String content = fileHandler.loadFromFile(inputFileName);
       textArea.setText(content);
     } catch (IOException e) {
+      logger.error("Failed to load file: {}", e.getMessage());
       JOptionPane.showMessageDialog(this, "Failed to load file: " + e.getMessage(),
           "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -214,6 +218,7 @@ public class ImageContentPanel extends JPanel {
       JOptionPane.showMessageDialog(this, "File saved successfully.",
           "Success", JOptionPane.INFORMATION_MESSAGE);
     } catch (IOException ex) {
+      logger.error("Failed to save file: {}", ex.getMessage());
       JOptionPane.showMessageDialog(this, "Failed to save file: " + ex.getMessage(),
           "Error", JOptionPane.ERROR_MESSAGE);
     }

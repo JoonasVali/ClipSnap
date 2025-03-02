@@ -5,4 +5,5 @@ module bookreader.core {
   requires openai.java.client.okhttp;
   requires openai.java.core;
   requires org.json;
+  requires org.slf4j;
 }

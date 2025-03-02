@@ -2,11 +2,15 @@ package com.github.joonasvali.bookreaderai.transcribe;
 
 import com.github.joonasvali.bookreaderai.openai.ImageAnalysis;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.util.concurrent.CompletableFuture;
 
 public class SimpleTranscriberAgent {
+  private static final Logger logger = LoggerFactory.getLogger(SimpleTranscriberAgent.class);
+
   private static final String SYSTEM_PROMPT = """
         You are a professional Transcriber. Transcribe image and give the text back without explanation.
         ${LANGUAGE}Make your best judgement to detect the words in the picture if they
@@ -40,7 +44,7 @@ public class SimpleTranscriberAgent {
   public CompletableFuture<ProcessingResult<String>> transcribe() {
     return CompletableFuture.supplyAsync(() -> {
       try {
-        ImageAnalysis imageAnalysis = new ImageAnalysis(bufferedImage, SYSTEM_PROMPT
+        ImageAnalysis imageAnalysis = new ImageAnalysis(SYSTEM_PROMPT
             .replace("${LANGUAGE}", languageDirection)
             .replace("${STORY}", story)
         );
@@ -61,7 +65,7 @@ public class SimpleTranscriberAgent {
           return result;
         }
       } catch (Exception e) {
-        e.printStackTrace();
+        logger.error("Unable to complete transcription", e);
         throw new RuntimeException(e);
       }
     });

@@ -3,6 +3,8 @@ package com.github.joonasvali.bookreaderai.transcribe;
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.TextJoiner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -13,7 +15,7 @@ import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 public class JoinedTranscriber {
-
+  private static final Logger logger = LoggerFactory.getLogger(JoinedTranscriber.class);
 
   private final BufferedImage[] images;
   private final String language;
@@ -53,7 +55,7 @@ public class JoinedTranscriber {
         try {
           return future.join();
         } catch (CompletionException e) {
-          e.printStackTrace();
+          logger.error("Unable to complete transcription", e);
           return new ProcessingResult<>("Task failed", 0, 0, 0);
         }
       }).toList();

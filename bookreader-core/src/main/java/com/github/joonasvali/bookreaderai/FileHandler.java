@@ -1,10 +1,13 @@
 package com.github.joonasvali.bookreaderai;
 
+import org.slf4j.Logger;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class FileHandler {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(FileHandler.class);
   private final Path outputFolder;
 
   public FileHandler(Path outputFolder) {
@@ -16,14 +19,14 @@ public class FileHandler {
   }
 
   public void saveToFile(String fileNameBody, String content) throws IOException {
-    System.out.println("Saving to file: " + fileNameBody);
+    logger.info("Saving to file: {}", fileNameBody);
     Path filePath = getFilePath(fileNameBody);
     Files.createDirectories(filePath.getParent());
     Files.writeString(filePath, content);
   }
 
   public String loadFromFile(String fileNameBody) throws IOException {
-    System.out.println("Loading from file: " + fileNameBody);
+    logger.info("Loading from file: {}", fileNameBody);
     Path filePath = getFilePath(fileNameBody);
     if (Files.exists(filePath)) {
       return Files.readString(filePath);

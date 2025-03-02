@@ -1,5 +1,7 @@
 package com.github.joonasvali.bookreaderai;
 
+import org.slf4j.Logger;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import java.awt.*;
@@ -12,6 +14,9 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class SettingsPanel extends JPanel {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(SettingsPanel.class);
+
+  public static final String LANGUAGE_KEY = "language";
   public static final String STORY_KEY = "story";
 
   private JLabel apiKeyStatusLabel;
@@ -20,8 +25,7 @@ public class SettingsPanel extends JPanel {
   private JLabel folderErrorLabel;
   private JButton continueButton;
 
-  private final String defaultLanguage;
-  private final String defaultStory;
+  private final TranscriptionHints defaultHints;
 
   // New fields
   private JTextField languageField;
@@ -30,9 +34,8 @@ public class SettingsPanel extends JPanel {
   private Preferences preferences;
   private final Consumer<Path> continueAction;
 
-  public SettingsPanel(String defaultStory, String defaultLanguage, Consumer<Path> continueAction) {
-    this.defaultLanguage = defaultLanguage;
-    this.defaultStory = defaultStory;
+  public SettingsPanel(TranscriptionHints defaultHints, Consumer<Path> continueAction) {
+    this.defaultHints = defaultHints;
     this.continueAction = continueAction;
     preferences = Preferences.userNodeForPackage(SettingsPanel.class);
 
@@ -72,9 +75,11 @@ public class SettingsPanel extends JPanel {
     JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     String openaiApiKey = System.getenv("OPENAI_API_KEY");
     if (openaiApiKey == null || openaiApiKey.isEmpty()) {
+      logger.warn("OPENAI_API_KEY not found.");
       apiKeyStatusLabel = new JLabel("Error: OPENAI_API_KEY not found.");
       apiKeyStatusLabel.setForeground(Color.RED);
     } else {
+      logger.debug("OPENAI_API_KEY loaded successfully.");
       apiKeyStatusLabel = new JLabel("OPENAI_API_KEY loaded successfully.");
       apiKeyStatusLabel.setForeground(Color.BLACK);
     }
@@ -141,10 +146,10 @@ public class SettingsPanel extends JPanel {
     panel.add(languageLabel, gbc);
 
     languageField = new JTextField(20);
-    languageField.setText(preferences.get("language", defaultLanguage));
+    languageField.setText(preferences.get(LANGUAGE_KEY, defaultHints.language()));
     // Save to preferences whenever text changes
     languageField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
-        preferences.put("language", languageField.getText())
+        preferences.put(LANGUAGE_KEY, languageField.getText())
     ));
     gbc.gridx = 1;
     gbc.gridy = 2;
@@ -156,14 +161,14 @@ public class SettingsPanel extends JPanel {
     gbc.gridwidth = 1;
 
     // --- ROW 3: Topic label and field ---
-    JLabel topicLabel = new JLabel("Topic:");
+    JLabel topicLabel = new JLabel("Story hint:");
     gbc.gridx = 0;
     gbc.gridy = 3;
     gbc.weightx = 0;
     panel.add(topicLabel, gbc);
 
     storyField = new JTextField(20);
-    storyField.setText(preferences.get(STORY_KEY, defaultStory));
+    storyField.setText(preferences.get(STORY_KEY, defaultHints.story()));
     // Save to preferences whenever text changes
     storyField.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
         preferences.put(STORY_KEY, storyField.getText())
@@ -201,12 +206,14 @@ public class SettingsPanel extends JPanel {
     if (result == JFileChooser.APPROVE_OPTION) {
       File selectedFolder = chooser.getSelectedFile();
       if (selectedFolder.isDirectory() && containsJpg(selectedFolder)) {
+        logger.debug("Selected folder: {}", selectedFolder.getAbsolutePath());
         folderPathField.setText(selectedFolder.getAbsolutePath());
         folderErrorLabel.setText("");
         continueButton.setEnabled(true);
         // Save to preferences
         preferences.put("inputFolder", selectedFolder.getAbsolutePath());
       } else {
+        logger.warn("Selected folder does not contain any .jpg files.");
         folderErrorLabel.setText("Error: Selected folder does not contain any .jpg files.");
         folderErrorLabel.setForeground(Color.RED);
         continueButton.setEnabled(false);

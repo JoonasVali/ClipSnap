@@ -25,11 +25,11 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class ImageAnalysis {
-  private final BufferedImage bufferedImage;
-  private final String prompt;
+  public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+  public static final String OPENAI_API_KEY = "OPENAI_API_KEY";
 
-  public ImageAnalysis(BufferedImage bufferedImage, String prompt) {
-    this.bufferedImage = bufferedImage;
+  private final String prompt;
+  public ImageAnalysis(String prompt) {
     this.prompt = prompt;
   }
 
@@ -107,8 +107,8 @@ public class ImageAnalysis {
     RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json"));
 
     Request request = new Request.Builder()
-        .url("https://api.openai.com/v1/chat/completions")
-        .header("Authorization", "Bearer " + System.getenv("OPENAI_API_KEY"))
+        .url(COMPLETIONS_URL)
+        .header("Authorization", "Bearer " + System.getenv(OPENAI_API_KEY))
         .header("Content-Type", "application/json")
         .post(requestBody)
         .build();

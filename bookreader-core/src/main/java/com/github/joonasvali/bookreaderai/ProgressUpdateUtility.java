@@ -1,11 +1,15 @@
 package com.github.joonasvali.bookreaderai;
 
+import org.slf4j.Logger;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class ProgressUpdateUtility {
+  private final Logger logger = org.slf4j.LoggerFactory.getLogger(ProgressUpdateUtility.class);
+
   private final int totalTasks;
   private Boolean tasksCompleted[];
 
