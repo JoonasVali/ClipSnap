@@ -18,6 +18,10 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class ImageContentPanel extends JPanel {
+  public static final int LINE_BREAK_CHARS = 100;
+  public static final int DUMMY_PROGRESS = 5;
+  public static final int CUT_OVERLAP_PX = 50;
+
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(ImageContentPanel.class);
   private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex";
   public static final String PREF_KEY_ROTATION_BASE = "rotation";
@@ -177,11 +181,11 @@ public class ImageContentPanel extends JPanel {
   }
 
   private void performTranscription(JSpinner zoomLevel) {
-    bar.setValue(5); // Dummy progress
+    bar.setValue(DUMMY_PROGRESS);
     ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
     var points = imagePanel.getOriginalCropCoordinates();
     BufferedImage croppedImage = CutImageUtil.cutImage(loadedImage, points);
-    BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), 50);
+    BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));
@@ -193,7 +197,17 @@ public class ImageContentPanel extends JPanel {
     try {
       transcriber.transcribeImages(result -> {
         LineBreaker lineBreaker = new LineBreaker();
-        textArea.setText(lineBreaker.lineBreakAfterEvery(result.text(), 100));
+        String text = lineBreaker.lineBreakAfterEvery(result.text(), LINE_BREAK_CHARS);
+
+        if (originalImage.getWidth() == croppedImage.getWidth() && originalImage.getHeight() == croppedImage.getHeight()) {
+          // In case the crop is the same size as the original image, we just overwrite the text result
+          textArea.setText(text);
+        } else {
+          // Otherwise, we append the text result to the existing text
+          textArea.append("\n\n");
+          textArea.append(text);
+        }
+
         progressUpdateUtility.removeListener(listener);
         bar.setValue(0);
       });
