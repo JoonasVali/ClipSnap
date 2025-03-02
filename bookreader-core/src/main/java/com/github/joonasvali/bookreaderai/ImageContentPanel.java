@@ -37,17 +37,18 @@ public class ImageContentPanel extends JPanel {
   private JButton nextButton;
   private JButton saveButton;
   private JButton settingsButton;
+  private JButton produceFinalResultButton;
   private BufferedImage loadedImage;
   private BufferedImage originalImage;
   private ImagePanel imagePanel;
   private JProgressBar bar;
   private final Path outputFolder;
-  private Path fileTxtPath;
   private final FileHandler fileHandler;
   private String inputFileName;
   private Runnable switchToSettingsAction;
   private final TranscriptionHints hints;
   private boolean hasAPIKey = true;
+  private FinalResultManager finalResultManager;
 
   private Timer resizeTimer;  // For debouncing resize events
 
@@ -71,13 +72,13 @@ public class ImageContentPanel extends JPanel {
 
     this.switchToSettingsAction = switchToSettingsAction;
     this.fileHandler = new FileHandler(outputFolder);
+    this.finalResultManager = new FinalResultManager(paths, fileHandler);
 
     // Use the helper method to load the image (which also applies rotation)
-    inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
+    inputFileName = FileHandler.getFileNameWithoutSuffix(paths[currentIndex]);
     loadImage();
 
     initComponents();
-    calculateFileOutputPath();
     loadContent();
   }
 
@@ -87,7 +88,7 @@ public class ImageContentPanel extends JPanel {
     // Create top, center and bottom panels
     JPanel topPanel = new JPanel(new BorderLayout());
     JPanel centerPanel = new JPanel(new GridLayout(1, 2));
-    JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    JPanel bottomPanel = new JPanel(new BorderLayout());
 
     JPanel topLeftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     JPanel topMiddlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -96,6 +97,14 @@ public class ImageContentPanel extends JPanel {
     topPanel.add(topLeftPanel, BorderLayout.WEST);
     topPanel.add(topMiddlePanel, BorderLayout.CENTER);
     topPanel.add(topRightPanel, BorderLayout.EAST);
+
+    JPanel bottomLeftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JPanel bottomMiddlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    JPanel bottomRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+    bottomPanel.add(bottomLeftPanel, BorderLayout.WEST);
+    bottomPanel.add(bottomMiddlePanel, BorderLayout.CENTER);
+    bottomPanel.add(bottomRightPanel, BorderLayout.EAST);
 
     // Top panel components
     SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
@@ -144,8 +153,11 @@ public class ImageContentPanel extends JPanel {
     // Bottom panel: navigation buttons
     prevButton = new JButton("Previous");
     nextButton = new JButton("Next");
-    bottomPanel.add(prevButton);
-    bottomPanel.add(nextButton);
+    produceFinalResultButton = new JButton("Finish");
+
+    bottomMiddlePanel.add(prevButton);
+    bottomMiddlePanel.add(nextButton);
+    bottomRightPanel.add(produceFinalResultButton);
 
     // Add panels to main panel
     add(topPanel, BorderLayout.NORTH);
@@ -157,6 +169,11 @@ public class ImageContentPanel extends JPanel {
     nextButton.addActionListener(e -> showNextImage());
     saveButton.addActionListener(e -> saveContent());
     askButton.addActionListener(e -> performTranscription(zoomLevel));
+    produceFinalResultButton.addActionListener(e -> {
+      if (promptSaveIfNeeded()) {
+        finalResultManager.invokeSaveFinalResultDialog(this);
+      }
+    });
 
     // Resize listener with debouncing
     resizeTimer = new Timer(100, e -> updateDisplay());
@@ -170,14 +187,9 @@ public class ImageContentPanel extends JPanel {
 
     settingsButton.addActionListener(
         e -> {
-          if (isUnsavedChanges()) {
-            int option = JOptionPane.showConfirmDialog(this,
-                "You have unsaved changes. Save them before moving to the previous image?",
-                "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
-            if (option == JOptionPane.CANCEL_OPTION) return;
-            if (option == JOptionPane.YES_OPTION) saveContent();
+          if (promptSaveIfNeeded()) {
+            switchToSettingsAction.run();
           }
-          switchToSettingsAction.run();
         }
     );
 
@@ -190,7 +202,7 @@ public class ImageContentPanel extends JPanel {
 
   // New method to build the preference key for rotation based on outputFolder and file name.
   private String getRotationPrefKey() {
-    return PREF_KEY_ROTATION_BASE + ":" + outputFolder.toString().hashCode() + ":" + getFileNameWithoutSuffix(paths[currentIndex]).hashCode();
+    return PREF_KEY_ROTATION_BASE + ":" + outputFolder.toString().hashCode() + ":" + FileHandler.getFileNameWithoutSuffix(paths[currentIndex]).hashCode();
   }
 
   private void performTranscription(JSpinner zoomLevel) {
@@ -275,43 +287,44 @@ public class ImageContentPanel extends JPanel {
   }
 
   private void showPreviousImage() {
-    if (currentIndex > 0) {
-      if (isUnsavedChanges()) {
-        int option = JOptionPane.showConfirmDialog(this,
-            "You have unsaved changes. Save them before moving to the previous image?",
-            "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
-        if (option == JOptionPane.CANCEL_OPTION) return;
-        if (option == JOptionPane.YES_OPTION) saveContent();
-      }
+    if (currentIndex > 0 && promptSaveIfNeeded()) {
       currentIndex--;
-      storeCurrentImageIndex(); // Save the updated index
-      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
-      calculateFileOutputPath();
-      loadContent();
-      loadImage();
-      imagePanel.resetCropRectangle();
-      updateDisplay();
+      reinitializeFromNewIndex();
     }
   }
 
   private void showNextImage() {
-    if (currentIndex < paths.length - 1) {
-      if (isUnsavedChanges()) {
-        int option = JOptionPane.showConfirmDialog(this,
-            "You have unsaved changes. Save them before moving to the next image?",
-            "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
-        if (option == JOptionPane.CANCEL_OPTION) return;
-        if (option == JOptionPane.YES_OPTION) saveContent();
-      }
+    if (currentIndex < paths.length - 1 && promptSaveIfNeeded()) {
       currentIndex++;
-      storeCurrentImageIndex(); // Save the updated index
-      inputFileName = getFileNameWithoutSuffix(paths[currentIndex]);
-      calculateFileOutputPath();
-      loadContent();
-      loadImage();
-      imagePanel.resetCropRectangle();
-      updateDisplay();
+      reinitializeFromNewIndex();
     }
+  }
+
+  /**
+   * Prompts the user to save unsaved changes, if any.
+   * @return true if the user has chosen to proceed, false if the user has cancelled the operation.
+   */
+  private boolean promptSaveIfNeeded() {
+    if (isUnsavedChanges()) {
+      int option = JOptionPane.showConfirmDialog(this,
+          "You have unsaved changes. Save them before moving to the previous image?",
+          "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION);
+      if (option == JOptionPane.CANCEL_OPTION) return false;
+      if (option == JOptionPane.YES_OPTION) {
+        saveContent();
+        return true;
+      }
+    }
+    return true;
+  }
+
+  private void reinitializeFromNewIndex() {
+    storeCurrentImageIndex();
+    inputFileName = FileHandler.getFileNameWithoutSuffix(paths[currentIndex]);
+    loadContent();
+    loadImage();
+    imagePanel.resetCropRectangle();
+    updateDisplay();
   }
 
   private void storeCurrentImageIndex() {
@@ -332,15 +345,6 @@ public class ImageContentPanel extends JPanel {
     }
   }
 
-  private String getFileNameWithoutSuffix(Path path) {
-    String fileName = path.getFileName().toString();
-    int dotIndex = fileName.lastIndexOf('.');
-    return (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
-  }
-
-  private void calculateFileOutputPath() {
-    fileTxtPath = outputFolder.resolve(currentIndex + ".txt");
-  }
 
   private void updateDisplay() {
     if (paths.length == 0 || currentIndex < 0 || currentIndex >= paths.length) {

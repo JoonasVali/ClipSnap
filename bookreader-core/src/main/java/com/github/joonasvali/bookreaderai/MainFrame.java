@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.Properties;
 
 public class MainFrame extends JFrame {
+  public static final int MAX_WIDTH = 1600;
+  public static final int MAX_HEIGHT = 1000;
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(MainFrame.class);
 
   public static final String TITLE = "SnapRead by Joonas Vali, 2025";
@@ -23,10 +25,11 @@ public class MainFrame extends JFrame {
   private JPanel contentContainer;
   private SettingsPanel settingsPanel;
 
+
   public MainFrame(Properties properties) {
     setTitle(TITLE);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setPreferredSize(new Dimension(1600, 1000));
+    adjustToDefaultFrameSize();
 
     // Create container using CardLayout
     cardLayout = new CardLayout();
@@ -70,6 +73,25 @@ public class MainFrame extends JFrame {
     pack();
     setLocationRelativeTo(null);
     setVisible(true);
+  }
+
+  private void adjustToDefaultFrameSize() {
+    // Get the current screen dimensions.
+    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
+    // Define a comfortable factor (90% of screen size) and maximum values.
+    double comfortableFactor = 0.9;
+
+    // Calculate dimensions as 90% of the screen dimensions.
+    int width = (int)(screenSize.width * comfortableFactor);
+    int height = (int)(screenSize.height * comfortableFactor);
+
+    // Ensure the size does not exceed your preferred maximum.
+    width = Math.min(width, MAX_WIDTH);
+    height = Math.min(height, MAX_HEIGHT);
+
+    // Set the calculated preferred size.
+    setPreferredSize(new Dimension(width, height));
   }
 
   /**
