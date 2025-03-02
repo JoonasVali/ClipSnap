@@ -75,14 +75,14 @@ public class SettingsPanel extends JPanel {
    */
   private JPanel createApiKeyPanel() {
     JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    String openaiApiKey = System.getenv("OPENAI_API_KEY");
+    String openaiApiKey = System.getenv(Constants.OPENAI_API_KEY_ENV_VARIABLE);
     if (openaiApiKey == null || openaiApiKey.isEmpty()) {
-      logger.warn("OPENAI_API_KEY not found.");
-      apiKeyStatusLabel = new JLabel("Error: OPENAI_API_KEY not found.");
+      logger.warn(Constants.OPENAI_API_KEY_ENV_VARIABLE + " not found.");
+      apiKeyStatusLabel = new JLabel("Error: " + Constants.OPENAI_API_KEY_ENV_VARIABLE + " not found.");
       apiKeyStatusLabel.setForeground(Color.RED);
     } else {
-      logger.debug("OPENAI_API_KEY loaded successfully.");
-      apiKeyStatusLabel = new JLabel("OPENAI_API_KEY loaded successfully.");
+      logger.debug(Constants.OPENAI_API_KEY_ENV_VARIABLE + " loaded successfully.");
+      apiKeyStatusLabel = new JLabel(Constants.OPENAI_API_KEY_ENV_VARIABLE + " loaded successfully.");
       apiKeyStatusLabel.setForeground(Color.BLACK);
     }
     panel.add(apiKeyStatusLabel);

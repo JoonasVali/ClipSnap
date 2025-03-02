@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.transcribe;
 
+import com.github.joonasvali.bookreaderai.Constants;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
@@ -36,7 +37,9 @@ public class TranscribeFixerAgent {
   }
 
   public ProcessingResult<String> fix(String text) {
-    OpenAIClient client = OpenAIOkHttpClient.fromEnv();
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+        .apiKey(System.getenv(Constants.OPENAI_API_KEY_ENV_VARIABLE))
+        .build();
 
     var builder = ChatCompletionCreateParams.builder()
         .addUserMessage(SYSTEM_PROMPT

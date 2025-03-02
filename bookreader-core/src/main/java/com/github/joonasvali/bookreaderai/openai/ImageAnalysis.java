@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.openai;
 
+import com.github.joonasvali.bookreaderai.Constants;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -26,7 +27,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class ImageAnalysis {
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
-  public static final String OPENAI_API_KEY = "OPENAI_API_KEY";
 
   private final String prompt;
   public ImageAnalysis(String prompt) {
@@ -108,7 +108,7 @@ public class ImageAnalysis {
 
     Request request = new Request.Builder()
         .url(COMPLETIONS_URL)
-        .header("Authorization", "Bearer " + System.getenv(OPENAI_API_KEY))
+        .header("Authorization", "Bearer " + System.getenv(Constants.OPENAI_API_KEY_ENV_VARIABLE))
         .header("Content-Type", "application/json")
         .post(requestBody)
         .build();

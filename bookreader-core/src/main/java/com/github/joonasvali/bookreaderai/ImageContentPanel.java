@@ -41,10 +41,16 @@ public class ImageContentPanel extends JPanel {
   private String inputFileName;
   private Runnable switchToSettingsAction;
   private final TranscriptionHints hints;
+  private boolean hasAPIKey = true;
 
   private Timer resizeTimer;  // For debouncing resize events
 
   public ImageContentPanel(TranscriptionHints hints, Path[] paths, Path outputFolder, Runnable switchToSettingsAction) {
+    String openaiApiKey = System.getenv(Constants.OPENAI_API_KEY_ENV_VARIABLE);
+    if (openaiApiKey == null || openaiApiKey.isEmpty()) {
+      hasAPIKey = false;
+    }
+
     this.hints = hints;
     this.paths = paths;
 
@@ -91,6 +97,7 @@ public class ImageContentPanel extends JPanel {
     saveButton = new JButton("Save");
     settingsButton = new JButton("Settings");
     JButton askButton = new JButton("Transcribe");
+    askButton.setEnabled(hasAPIKey);
     bar = new JProgressBar();
 
     topLeftPanel.add(settingsButton);
@@ -100,6 +107,7 @@ public class ImageContentPanel extends JPanel {
     topLeftPanel.add(rotateButton);
     rotateButton.addActionListener(e -> rotateImage());
 
+    topMiddlePanel.add(new JLabel("Detail level:"));
     topMiddlePanel.add(zoomLevel);
     topMiddlePanel.add(askButton);
     topMiddlePanel.add(bar);
