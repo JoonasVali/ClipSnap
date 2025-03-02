@@ -30,7 +30,7 @@ public class ImageContentPanel extends JPanel {
   private JButton saveButton;
   private JButton settingsButton;
   private BufferedImage loadedImage;
-  private BufferedImage originalImage; // Store the unrotated image
+  private BufferedImage originalImage;
   private ImagePanel imagePanel;
   private JProgressBar bar;
   private final Path outputFolder;
