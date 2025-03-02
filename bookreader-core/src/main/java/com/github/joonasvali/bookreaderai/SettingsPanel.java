@@ -14,6 +14,8 @@ import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class SettingsPanel extends JPanel {
+  public static final String INPUT_FOLDER_KEY = "inputFolder";
+  public static final int CONTENT_WIDTH = 800;
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(SettingsPanel.class);
 
   public static final String LANGUAGE_KEY = "language";
@@ -56,7 +58,7 @@ public class SettingsPanel extends JPanel {
     add(bottomPanel, BorderLayout.SOUTH);
 
     // Check if saved folder is valid; if so, enable "Continue" button
-    String savedFolder = preferences.get("inputFolder", "");
+    String savedFolder = preferences.get(INPUT_FOLDER_KEY, "");
     if (!savedFolder.isEmpty() && new File(savedFolder).isDirectory() && containsJpg(new File(savedFolder))) {
       continueButton.setEnabled(true);
     } else {
@@ -88,12 +90,17 @@ public class SettingsPanel extends JPanel {
   }
 
   /**
-   * Creates the center panel for folder selection, Language, and Topic,
-   * using a GridBagLayout for a more controlled layout.
+   * Creates the center panel for folder selection, Language, and Topic.
+   * The outer panel ("Settings") is full-width, while the inner content
+   * is forced to exactly 800px wide and centered at the top.
    */
   private JPanel createCenterPanel() {
-    JPanel panel = new JPanel(new GridBagLayout());
-    panel.setBorder(BorderFactory.createTitledBorder("Settings"));
+    // The main outer panel that spans the full width, with a titled border
+    JPanel mainPanel = new JPanel(new BorderLayout());
+    mainPanel.setBorder(BorderFactory.createTitledBorder("Settings"));
+
+    // The content panel that will actually hold the labels/fields
+    JPanel contentPanel = new JPanel(new GridBagLayout());
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(5, 5, 5, 5);
@@ -104,15 +111,15 @@ public class SettingsPanel extends JPanel {
     gbc.gridy = 0;
     gbc.weightx = 0;
     gbc.gridwidth = 1;
-    panel.add(folderLabel, gbc);
+    contentPanel.add(folderLabel, gbc);
 
     folderPathField = new JTextField(20);
     folderPathField.setEditable(false);
-    folderPathField.setText(preferences.get("inputFolder", ""));
+    folderPathField.setText(preferences.get(INPUT_FOLDER_KEY, ""));
     gbc.gridx = 1;
     gbc.gridy = 0;
     gbc.weightx = 1;
-    panel.add(folderPathField, gbc);
+    contentPanel.add(folderPathField, gbc);
 
     chooseFolderButton = new JButton("Choose Folder");
     chooseFolderButton.addActionListener(new ActionListener() {
@@ -124,7 +131,7 @@ public class SettingsPanel extends JPanel {
     gbc.gridx = 2;
     gbc.gridy = 0;
     gbc.weightx = 0;
-    panel.add(chooseFolderButton, gbc);
+    contentPanel.add(chooseFolderButton, gbc);
 
     // --- ROW 1: Folder error label (spans all columns) ---
     folderErrorLabel = new JLabel("");
@@ -133,7 +140,7 @@ public class SettingsPanel extends JPanel {
     gbc.gridy = 1;
     gbc.gridwidth = 3;
     gbc.weightx = 1;
-    panel.add(folderErrorLabel, gbc);
+    contentPanel.add(folderErrorLabel, gbc);
 
     // Reset gridwidth for subsequent rows
     gbc.gridwidth = 1;
@@ -143,7 +150,7 @@ public class SettingsPanel extends JPanel {
     gbc.gridx = 0;
     gbc.gridy = 2;
     gbc.weightx = 0;
-    panel.add(languageLabel, gbc);
+    contentPanel.add(languageLabel, gbc);
 
     languageField = new JTextField(20);
     languageField.setText(preferences.get(LANGUAGE_KEY, defaultHints.language()));
@@ -155,7 +162,7 @@ public class SettingsPanel extends JPanel {
     gbc.gridy = 2;
     gbc.weightx = 1;
     gbc.gridwidth = 2;
-    panel.add(languageField, gbc);
+    contentPanel.add(languageField, gbc);
 
     // Reset gridwidth
     gbc.gridwidth = 1;
@@ -165,7 +172,7 @@ public class SettingsPanel extends JPanel {
     gbc.gridx = 0;
     gbc.gridy = 3;
     gbc.weightx = 0;
-    panel.add(topicLabel, gbc);
+    contentPanel.add(topicLabel, gbc);
 
     storyField = new JTextField(20);
     storyField.setText(preferences.get(STORY_KEY, defaultHints.story()));
@@ -177,9 +184,27 @@ public class SettingsPanel extends JPanel {
     gbc.gridy = 3;
     gbc.weightx = 1;
     gbc.gridwidth = 2;
-    panel.add(storyField, gbc);
+    contentPanel.add(storyField, gbc);
 
-    return panel;
+    /*
+     * Force the content panel to always be exactly 800px wide:
+     *   - preferredSize sets the default "wanted" size
+     *   - minimumSize prevents it from shrinking below 800px
+     *   - maximumSize prevents it from growing beyond 800px
+     */
+    Dimension fixedSize = new Dimension(CONTENT_WIDTH, contentPanel.getPreferredSize().height);
+    contentPanel.setPreferredSize(fixedSize);
+    contentPanel.setMinimumSize(fixedSize);
+    contentPanel.setMaximumSize(new Dimension(CONTENT_WIDTH, Integer.MAX_VALUE));
+
+    // Flow panel to center the content horizontally
+    JPanel flowPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+    flowPanel.add(contentPanel);
+
+    // Add the flow panel to the top of the main panel
+    mainPanel.add(flowPanel, BorderLayout.NORTH);
+
+    return mainPanel;
   }
 
   /**
@@ -211,7 +236,7 @@ public class SettingsPanel extends JPanel {
         folderErrorLabel.setText("");
         continueButton.setEnabled(true);
         // Save to preferences
-        preferences.put("inputFolder", selectedFolder.getAbsolutePath());
+        preferences.put(INPUT_FOLDER_KEY, selectedFolder.getAbsolutePath());
       } else {
         logger.warn("Selected folder does not contain any .jpg files.");
         folderErrorLabel.setText("Error: Selected folder does not contain any .jpg files.");

@@ -14,6 +14,15 @@ public class Main {
   public static void main(String[] args) throws IOException, InterruptedException, InvocationTargetException {
     Properties properties = new Properties();
     Path path = Path.of("snapread.properties").toAbsolutePath();
+    if (Files.notExists(path)) {
+      if (args.length > 0) {
+        path = Path.of(args[0]).toAbsolutePath();
+      }
+      if (Files.notExists(path)) {
+        logger.error("Properties file not found: {}", path);
+        System.exit(1);
+      }
+    }
     try (var in = Files.newInputStream(path)) {
       properties.load(in);
     }

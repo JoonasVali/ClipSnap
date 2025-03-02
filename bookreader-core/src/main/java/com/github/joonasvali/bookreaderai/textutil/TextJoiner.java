@@ -3,7 +3,7 @@ package com.github.joonasvali.bookreaderai.textutil;
 /**
  * A class that joins two text snippets together, trying to avoid repeating the same information.
  *
- * This class is 100% AI generated, good luck!
+ * This class is 100% AI generated using test-driven development, good luck!
  */
 public class TextJoiner {
 
