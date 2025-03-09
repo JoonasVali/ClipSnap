@@ -74,7 +74,8 @@ public class ImageResizer {
   /**
    * Scales the given BufferedImage so that neither width nor height is less than {minShortSize} pixels.
    * The aspect ratio is preserved. If the image already meets the minimum size requirements,
-   * the original image is returned.
+   * the original image is returned. In case the resizing can't be done due to maximum dimensions being
+   * exceeded, a black padding is added to meet the minimum size requirements.
    *
    * @param input the original BufferedImage
    * @return a BufferedImage with both dimensions at least {minShortSize}px.
@@ -83,30 +84,58 @@ public class ImageResizer {
     int width = input.getWidth();
     int height = input.getHeight();
 
-    // If both dimensions are already at least {minShortSize} px, no scaling is needed.
+    // If both dimensions already meet the minimum, no action is needed.
     if (width >= minShortSize && height >= minShortSize) {
       return input;
     }
 
-    // Calculate the scale factors needed for each dimension.
+    // Compute the scale factors needed to bring each dimension to minShortSize.
     double scaleFactorWidth = (double) minShortSize / width;
     double scaleFactorHeight = (double) minShortSize / height;
-
-    // Choose the larger scale factor so that both dimensions become at least {minShortSize}.
+    // Use the larger factor so that both dimensions meet the min requirement.
     double scaleFactor = Math.max(scaleFactorWidth, scaleFactorHeight);
 
-    int newWidth = (int) Math.round(width * scaleFactor);
-    int newHeight = (int) Math.round(height * scaleFactor);
+    int potentialWidth = (int) Math.round(width * scaleFactor);
+    int potentialHeight = (int) Math.round(height * scaleFactor);
 
-    // Create a new BufferedImage with the scaled dimensions.
-    BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, input.getType());
-    Graphics2D g2d = scaledImage.createGraphics();
+    // Determine if scaling would exceed the max limits.
+    // For a portrait image (width < height), width is the short side and height is the long side.
+    // For landscape (or square), height is the short side.
+    boolean scalingExceedsMax = false;
+    if (width < height) { // Portrait
+      if (potentialWidth > maxShortSize || potentialHeight > maxLongSize) {
+        scalingExceedsMax = true;
+      }
+    } else { // Landscape or square
+      if (potentialHeight > maxShortSize || potentialWidth > maxLongSize) {
+        scalingExceedsMax = true;
+      }
+    }
 
-    // Use high-quality scaling.
-    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-    g2d.drawImage(input, 0, 0, newWidth, newHeight, null);
-    g2d.dispose();
-
-    return scaledImage;
+    if (!scalingExceedsMax) {
+      // Safe to scale up.
+      BufferedImage scaledImage = new BufferedImage(potentialWidth, potentialHeight, input.getType());
+      Graphics2D g2d = scaledImage.createGraphics();
+      g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+      g2d.drawImage(input, 0, 0, potentialWidth, potentialHeight, null);
+      g2d.dispose();
+      return scaledImage;
+    } else {
+      // Scaling up would exceed max limits.
+      // Instead, add a black margin (padding) to meet the min dimension requirement.
+      int finalWidth = Math.max(width, minShortSize);
+      int finalHeight = Math.max(height, minShortSize);
+      BufferedImage padded = new BufferedImage(finalWidth, finalHeight, input.getType());
+      Graphics2D g2d = padded.createGraphics();
+      // Fill the new image with black.
+      g2d.setColor(Color.BLACK);
+      g2d.fillRect(0, 0, finalWidth, finalHeight);
+      // Center the original image on the canvas.
+      int x = (finalWidth - width) / 2;
+      int y = (finalHeight - height) / 2;
+      g2d.drawImage(input, x, y, null);
+      g2d.dispose();
+      return padded;
+    }
   }
 }
