@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai.openai;
 
 import com.github.joonasvali.bookreaderai.Constants;
+import com.github.joonasvali.bookreaderai.imageutil.ImageResizer;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -42,7 +43,10 @@ public class ImageAnalysis {
 
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
-    String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
+    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+
+    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
     JSONObject jsonObject = new JSONObject(result);
@@ -57,7 +61,10 @@ public class ImageAnalysis {
   }
 
   public ProcessingResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
-    String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
+    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+
+    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
     String result =  sendRequestToOpenAI(jsonBody);
     JSONObject jsonObject = new JSONObject(result);
@@ -88,7 +95,11 @@ public class ImageAnalysis {
 
     JSONArray contentArray = new JSONArray();
     contentArray.put(new JSONObject().put("type", "text").put("text", prompt));
-    contentArray.put(new JSONObject().put("type", "image_url").put("image_url", new JSONObject().put("url", "data:image/jpeg;base64," + base64Image)));
+
+    JSONObject imageUrlObject = new JSONObject();
+    contentArray.put(new JSONObject().put("type", "image_url").put("image_url", imageUrlObject));
+    imageUrlObject.put("url", "data:image/jpeg;base64," + base64Image);
+    imageUrlObject.put("detail", "high");
 
     userMessage.put("content", contentArray);
     messages.put(userMessage);
