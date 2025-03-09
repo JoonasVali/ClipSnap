@@ -20,7 +20,7 @@ public class TranscribeFixerAgent {
       """;
 
   private static final String SYSTEM_PROMPT_FINAL = """
-        Only output the fixed text fully, nothing else, no surrounding quotes or explanations.
+        Only output the fixed content fully, nothing else, no surrounding quotes or explanations.
       """;
 
   private final String languageDirection;
@@ -29,7 +29,7 @@ public class TranscribeFixerAgent {
 
   public TranscribeFixerAgent(String language, String story) {
     if (language != null) {
-      this.languageDirection = "The text is in " + language + " mostly.";
+      this.languageDirection = "The content is in " + language + " mostly.";
     } else {
       this.languageDirection = "";
     }
@@ -58,7 +58,7 @@ public class TranscribeFixerAgent {
     System.out.println(firstOutput);
 
     if (firstOutput.equals("-No content-")) {
-      throw new RuntimeException("Failed to fix the text.");
+      throw new RuntimeException("Failed to fix the content.");
     }
 
     var finalBuilder = ChatCompletionCreateParams.builder()

@@ -8,11 +8,14 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
@@ -26,6 +29,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class ImageAnalysis {
+  private static final Logger logger = LoggerFactory.getLogger(ImageAnalysis.class);
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
   private final String prompt;
@@ -43,6 +47,15 @@ public class ImageAnalysis {
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Processing image");
+      Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      logger.debug("Writing image to " + file);
+      ImageIO.write(bufferedImage, "jpg", file.toFile());
+    }
+
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
     JSONObject jsonObject = new JSONObject(result);
@@ -58,6 +71,15 @@ public class ImageAnalysis {
 
   public ProcessingResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
     String base64Image = convertBufferedImageToBase64(bufferedImage, "jpg");
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Processing image");
+      Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      logger.debug("Writing image to " + file);
+      ImageIO.write(bufferedImage, "jpg", file.toFile());
+    }
+
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
     String result =  sendRequestToOpenAI(jsonBody);
     JSONObject jsonObject = new JSONObject(result);

@@ -3,15 +3,15 @@ package com.github.joonasvali.bookreaderai.textutil;
 public class LineBreaker {
 
   /**
-   * Wraps the given text so that each line does not exceed maxWidth characters.
+   * Wraps the given content so that each line does not exceed maxWidth characters.
    * Existing line breaks are preserved.
    *
-   * @param text     the text to wrap
+   * @param text     the content to wrap
    * @param maxWidth maximum number of characters per line
-   * @return the word-wrapped text
+   * @return the word-wrapped content
    */
   public String lineBreakAfterEvery(String text, int maxWidth) {
-    // Split the text into lines based on existing line breaks
+    // Split the content into lines based on existing line breaks
     String[] lines = text.split("\\r?\\n");
     StringBuilder result = new StringBuilder();
 
@@ -25,7 +25,7 @@ public class LineBreaker {
   }
 
   /**
-   * Wraps a single line of text so that no line exceeds maxWidth characters.
+   * Wraps a single line of content so that no line exceeds maxWidth characters.
    * Words are kept intact unless a word itself exceeds the maximum width.
    *
    * @param line     the line to wrap

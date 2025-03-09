@@ -248,7 +248,7 @@ public class ImageContentPanel extends JPanel {
     try {
       transcriber.transcribeImages(result -> {
         LineBreaker lineBreaker = new LineBreaker();
-        String text = lineBreaker.lineBreakAfterEvery(result.text(), LINE_BREAK_CHARS);
+        String text = lineBreaker.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
 
         if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
           // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.

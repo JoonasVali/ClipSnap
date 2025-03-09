@@ -66,7 +66,8 @@ public class JoinedTranscriber {
 
       List<String> texts = new ArrayList<>();
       for (ProcessingResult<String> result : results) {
-        texts.add(result.text());
+        logger.debug("Transcription result: {}", result.content());
+        texts.add(result.content());
       }
 
       callback.accept(new ProcessingResult<>(join(texts),
@@ -80,7 +81,7 @@ public class JoinedTranscriber {
 
   private String join(List<String> results) {
     TextJoiner joiner = new TextJoiner();
-    String joinedText = results.get(0);
+    String joinedText = results.getFirst();
 
     for (int i = 1; i < results.size(); i++) {
       joinedText = joiner.join(joinedText, results.get(i));

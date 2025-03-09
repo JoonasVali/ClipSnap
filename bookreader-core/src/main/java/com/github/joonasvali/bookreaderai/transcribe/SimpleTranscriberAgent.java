@@ -33,7 +33,7 @@ public class SimpleTranscriberAgent {
   public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, boolean useFixerAgent) {
     this.bufferedImage = bufferedImage;
     if (language != null) {
-      this.languageDirection = "The text is in " + language + " mostly.";
+      this.languageDirection = "The content is in " + language + " mostly.";
     } else {
       this.languageDirection = "";
     }
@@ -46,12 +46,24 @@ public class SimpleTranscriberAgent {
     return CompletableFuture.supplyAsync(() -> {
       try {
         ImageAnalysis imageAnalysis = createImageAnalysis();
-        ProcessingResult<String> result = processImage(imageAnalysis);
+        ProcessingResult<String[]> results = processImage(imageAnalysis);
+
+        TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
+        ProcessingResult<String> result = verifierAgent.verify(results.content());
 
         if (useFixerAgent) {
-          return fixTranscriptionResult(result);
+          result = fixTranscriptionResult(result);
+          return new ProcessingResult<>(result.content(),
+              result.promptTokens() + results.promptTokens(),
+              result.completionTokens() + results.completionTokens(),
+              result.totalTokens() + results.totalTokens()
+          );
         } else {
-          return result;
+          return new ProcessingResult<>(result.content(),
+              result.promptTokens() + results.promptTokens(),
+              result.completionTokens() + results.completionTokens(),
+              result.totalTokens() + results.totalTokens()
+          );
         }
       } catch (Exception e) {
         logger.error("Unable to complete transcription", e);
@@ -67,16 +79,16 @@ public class SimpleTranscriberAgent {
     );
   }
 
-  private ProcessingResult<String> processImage(ImageAnalysis imageAnalysis) throws IOException {
-    return imageAnalysis.process(bufferedImage);
+  private ProcessingResult<String[]> processImage(ImageAnalysis imageAnalysis) throws IOException {
+    return imageAnalysis.process(bufferedImage, 3);
   }
 
   private ProcessingResult<String> fixTranscriptionResult(ProcessingResult<String> result) {
     TranscribeFixerAgent fixerAgent = new TranscribeFixerAgent(language, story);
-    ProcessingResult<String> fixedResult = fixerAgent.fix(result.text());
+    ProcessingResult<String> fixedResult = fixerAgent.fix(result.content());
 
     return new ProcessingResult<>(
-        fixedResult.text(),
+        fixedResult.content(),
         result.promptTokens() + fixedResult.promptTokens(),
         result.completionTokens() + fixedResult.completionTokens(),
         result.totalTokens() + fixedResult.totalTokens()
