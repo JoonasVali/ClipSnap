@@ -17,12 +17,10 @@ public class TextAligner {
   public static class AlignmentResult {
     private final String alignedText;
     private final boolean success;
-    private final String message;
 
-    public AlignmentResult(String alignedText, boolean success, String message) {
+    public AlignmentResult(String alignedText, boolean success) {
       this.alignedText = alignedText;
       this.success = success;
-      this.message = message;
     }
 
     public String getAlignedText() {
@@ -31,10 +29,6 @@ public class TextAligner {
 
     public boolean isSuccess() {
       return success;
-    }
-
-    public String getMessage() {
-      return message;
     }
   }
 
@@ -54,7 +48,7 @@ public class TextAligner {
   public AlignmentResult alignTexts(String[] texts) {
     // Validate input
     if (texts == null || texts.length == 0) {
-      return new AlignmentResult("", false, "Input array is null or empty.");
+      return new AlignmentResult("", false);
     }
 
     // Split each text into words (assuming words are separated by whitespace).
@@ -102,6 +96,6 @@ public class TextAligner {
       }
     }
 
-    return new AlignmentResult(alignedTextBuilder.toString(), true, "Alignment successful.");
+    return new AlignmentResult(alignedTextBuilder.toString(), true);
   }
 }

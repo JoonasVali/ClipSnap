@@ -1,4 +1,4 @@
 package com.github.joonasvali.bookreaderai.textutil.restoration;
 
-public class MajorityVoteRestorer {
+public record Sentence(String[] texts) {
 }

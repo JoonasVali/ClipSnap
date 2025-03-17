@@ -14,7 +14,6 @@ public class TextAlignerTest {
     TextAligner.AlignmentResult result = aligner.alignTexts(null);
     assertFalse(result.isSuccess());
     assertEquals("", result.getAlignedText());
-    assertEquals("Input array is null or empty.", result.getMessage());
   }
 
   @Test
@@ -22,7 +21,6 @@ public class TextAlignerTest {
     TextAligner.AlignmentResult result = aligner.alignTexts(new String[]{});
     assertFalse(result.isSuccess());
     assertEquals("", result.getAlignedText());
-    assertEquals("Input array is null or empty.", result.getMessage());
   }
 
   @Test
@@ -32,7 +30,6 @@ public class TextAlignerTest {
     // Note: The implementation converts words to lower-case.
     assertTrue(result.isSuccess());
     assertEquals("the quick brown fox", result.getAlignedText());
-    assertEquals("Alignment successful.", result.getMessage());
   }
 
   @Test
@@ -42,7 +39,7 @@ public class TextAlignerTest {
     TextAligner.AlignmentResult result = aligner.alignTexts(texts);
     assertTrue(result.isSuccess());
     assertEquals("the quick brown fox", result.getAlignedText());
-    assertEquals("Alignment successful.", result.getMessage());
+    assertTrue(result.isSuccess());
   }
 
   @Test
@@ -54,9 +51,8 @@ public class TextAlignerTest {
     String[] texts = { text1, text2, text3 };
     TextAligner.AlignmentResult result = aligner.alignTexts(texts);
     // Majority vote should yield "fox" for the 4th word.
-    assertTrue(result.isSuccess());
     assertEquals("the quick brown fox", result.getAlignedText());
-    assertEquals("Alignment successful.", result.getMessage());
+    assertTrue(result.isSuccess());
   }
 
   @Test
@@ -72,9 +68,32 @@ public class TextAlignerTest {
     // Index 1: "quick" from all texts.
     // Index 2: "brown" from all texts.
     // Index 3: "fox" from text1 and text3.
-    // Index 4: "jumps" from text3.
-    assertTrue(result.isSuccess());
+    // Index 4: "jumps" from text3.+
     assertEquals("the quick brown fox jumps", result.getAlignedText());
-    assertEquals("Alignment successful.", result.getMessage());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
+  public void testTextWithAlotOfMistakes() {
+    // Some texts have missing words at certain positions.
+    String text1 = "Thw quick brown fox";
+    String text2 = "The qick brown fix";
+    String text3 = "The quick red fox";
+    String[] texts = { text1, text2, text3 };
+    TextAligner.AlignmentResult result = aligner.alignTexts(texts);
+    assertEquals("the quick brown fox", result.getAlignedText());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
+  public void testTextWithAlotOfMistakesAndDifferentLength() {
+    // Some texts have missing words at certain positions.
+    String text1 = "Thw quick brown fox";
+    String text2 = "The qick brown";
+    String text3 = "The quick red fox";
+    String[] texts = { text1, text2, text3 };
+    TextAligner.AlignmentResult result = aligner.alignTexts(texts);
+    assertEquals("the quick brown fox", result.getAlignedText());
+    assertTrue(result.isSuccess());
   }
 }
