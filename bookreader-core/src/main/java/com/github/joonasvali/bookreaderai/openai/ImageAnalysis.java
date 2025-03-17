@@ -62,6 +62,11 @@ public class ImageAnalysis {
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
+
+    if (result.startsWith("Error")) {
+      throw new RuntimeException(result);
+    }
+
     JSONObject jsonObject = new JSONObject(result);
     JSONArray choices = jsonObject.getJSONArray("choices");
     JSONObject choice = choices.getJSONObject(0);
@@ -87,20 +92,30 @@ public class ImageAnalysis {
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
-    String result =  sendRequestToOpenAI(jsonBody);
-    JSONObject jsonObject = new JSONObject(result);
-    JSONArray choices = jsonObject.getJSONArray("choices");
-    String[] results = new String[answers];
-    for (int i = 0; i < answers; i++) {
-      JSONObject choice = choices.getJSONObject(i);
-      JSONObject message = choice.getJSONObject("message");
-      results[i] = message.getString("content");
+    String result = sendRequestToOpenAI(jsonBody);
+
+    if (result.startsWith("Error")) {
+      throw new RuntimeException(result);
     }
-    JSONObject usage = jsonObject.getJSONObject("usage");
-    int totalTokens = usage.getInt("total_tokens");
-    int promptTokens = usage.getInt("prompt_tokens");
-    int completionTokens = usage.getInt("completion_tokens");
-    return new ProcessingResult<>(results, totalTokens, promptTokens, completionTokens);
+
+    try {
+      JSONObject jsonObject = new JSONObject(result);
+      JSONArray choices = jsonObject.getJSONArray("choices");
+      String[] results = new String[answers];
+      for (int i = 0; i < answers; i++) {
+        JSONObject choice = choices.getJSONObject(i);
+        JSONObject message = choice.getJSONObject("message");
+        results[i] = message.getString("content");
+      }
+      JSONObject usage = jsonObject.getJSONObject("usage");
+      int totalTokens = usage.getInt("total_tokens");
+      int promptTokens = usage.getInt("prompt_tokens");
+      int completionTokens = usage.getInt("completion_tokens");
+      return new ProcessingResult<>(results, totalTokens, promptTokens, completionTokens);
+    } catch (Exception e) {
+      logger.debug("Exceptional result: " + result);
+      throw new RuntimeException(e);
+    }
   }
 
   public JSONObject createJsonPayload(String base64Image, int n) {
@@ -130,6 +145,10 @@ public class ImageAnalysis {
   }
 
   public static String sendRequestToOpenAI(JSONObject jsonBody) throws IOException {
+    return sendRequestToOpenAI(jsonBody, 0);
+  }
+
+  public static String sendRequestToOpenAI(JSONObject jsonBody, int retry) throws IOException {
     OkHttpClient client = new OkHttpClient.Builder()
         .connectTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(120, TimeUnit.SECONDS)
@@ -149,8 +168,17 @@ public class ImageAnalysis {
       if (response.isSuccessful() && response.body() != null) {
         return response.body().string();
       } else {
+        if (response.code() == 429) {
+          if (retry < 5) {
+            Thread.sleep((retry + 1) * 3000L);
+            return sendRequestToOpenAI(jsonBody, retry + 1);
+          }
+        }
         return "Error: " + response.code() + " - " + response.message();
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
+    return "Error: Unable to complete request";
   }
 }
