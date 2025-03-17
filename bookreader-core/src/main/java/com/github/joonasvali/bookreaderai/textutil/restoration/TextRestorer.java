@@ -28,7 +28,8 @@ public class TextRestorer {
         return texts[0];
       }
 
-      if (!finalVersion.isEmpty() && finalVersion.charAt(finalVersion.length() - 1) != ' ') {
+      char lastChar = !finalVersion.isEmpty() ? finalVersion.charAt(finalVersion.length() - 1) : '\n';
+      if (lastChar != ' ' && lastChar != '\n') {
         finalVersion.append(" ");
       }
       finalVersion.append(result.getAlignedText());

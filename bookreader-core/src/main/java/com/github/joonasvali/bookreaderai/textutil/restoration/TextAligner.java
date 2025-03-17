@@ -33,65 +33,122 @@ public class TextAligner {
   }
 
   /**
+   * A simple structure holding a token’s base (the word without any trailing newline)
+   * and a flag indicating if the token originally ended with a newline.
+   */
+  private static class TokenInfo {
+    String base;      // the token without a trailing newline
+    boolean hasNewline;  // whether the token ended with a newline
+
+    TokenInfo(String token) {
+      if (token.endsWith("\n")) {
+        this.base = token.substring(0, token.length() - 1);
+        this.hasNewline = true;
+      } else {
+        this.base = token;
+        this.hasNewline = false;
+      }
+    }
+  }
+
+  /**
    * Aligns the provided texts using a majority vote strategy.
    * <p>
-   * Assumptions:
-   * <ul>
-   *   <li>Each text is pre-normalized (i.e., similar punctuation, consistent spacing, etc.).</li>
-   *   <li>Alignment is performed on a word-by-word basis.</li>
-   *   <li>If a particular word position is missing in one text, that text is simply skipped for that position.</li>
-   * </ul>
+   * This implementation treats line breaks as part of the token.
+   * It splits each text using a single space (" ") so that tokens containing "\n" keep the newline
+   * attached. When comparing tokens, it uses the base word (token without trailing newline)
+   * in a case-insensitive manner. After computing the majority base word at each position,
+   * it chooses one token variant (preserving its original case) from among those matching the majority.
+   * If any of those tokens had a trailing newline, the resulting token will have one appended.
+   * <p>
+   * Reassembly inserts a space between tokens unless the previous token ended with a newline;
+   * in that case, if the token is not the last token, an extra space is appended immediately after the newline.
    *
    * @param texts an array of texts to align
    * @return an AlignmentResult containing the aligned text and meta information about the operation
    */
   public AlignmentResult alignTexts(String[] texts) {
-    // Validate input
     if (texts == null || texts.length == 0) {
       return new AlignmentResult("", false);
     }
 
-    // Split each text into words (assuming words are separated by whitespace).
-    // This assumes texts are already normalized for punctuation and casing.
-    int maxWords = 0;
-    String[][] wordsPerText = new String[texts.length][];
+    // Split each text into tokens by a single space.
+    // This preserves newline characters as part of tokens.
+    int maxTokens = 0;
+    TokenInfo[][] tokensPerText = new TokenInfo[texts.length][];
     for (int i = 0; i < texts.length; i++) {
       if (texts[i] != null) {
-        wordsPerText[i] = texts[i].trim().split("\\s+");
-        maxWords = Math.max(maxWords, wordsPerText[i].length);
+        String[] rawTokens = texts[i].split(" ");
+        tokensPerText[i] = new TokenInfo[rawTokens.length];
+        for (int j = 0; j < rawTokens.length; j++) {
+          tokensPerText[i][j] = new TokenInfo(rawTokens[j]);
+        }
+        maxTokens = Math.max(maxTokens, rawTokens.length);
       } else {
-        wordsPerText[i] = new String[0];
+        tokensPerText[i] = new TokenInfo[0];
       }
     }
 
-    StringBuilder alignedTextBuilder = new StringBuilder();
-
-    // Iterate over each word position.
-    for (int wordIndex = 0; wordIndex < maxWords; wordIndex++) {
+    // For each token position, do a majority vote on the base word (ignoring newline flag).
+    // Also track if any token for that base word contained a newline.
+    String[] alignedTokens = new String[maxTokens];
+    for (int tokenIndex = 0; tokenIndex < maxTokens; tokenIndex++) {
       Map<String, Integer> frequency = new HashMap<>();
+      Map<String, Boolean> newlineFlag = new HashMap<>();
 
-      // Count frequency of each word at the current position.
+      // Count frequencies and record newline flags for each base word (using lower-case for counting).
       for (int i = 0; i < texts.length; i++) {
-        if (wordIndex < wordsPerText[i].length) {
-          // Optionally, further normalize the word (e.g., lower-case).
-          String word = wordsPerText[i][wordIndex].toLowerCase();
-          frequency.put(word, frequency.getOrDefault(word, 0) + 1);
+        if (tokenIndex < tokensPerText[i].length) {
+          TokenInfo tokenInfo = tokensPerText[i][tokenIndex];
+          String baseLower = tokenInfo.base.toLowerCase();
+          frequency.put(baseLower, frequency.getOrDefault(baseLower, 0) + 1);
+          // Mark newline flag true if any token has a newline.
+          if (tokenInfo.hasNewline) {
+            newlineFlag.put(baseLower, true);
+          } else {
+            newlineFlag.putIfAbsent(baseLower, false);
+          }
         }
       }
 
-      // Determine the majority word.
-      String majorityWord = "";
+      // Determine the majority base word.
+      String majorityBaseLower = "";
       int maxCount = 0;
       for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
         if (entry.getValue() > maxCount) {
-          majorityWord = entry.getKey();
+          majorityBaseLower = entry.getKey();
           maxCount = entry.getValue();
         }
       }
 
-      // Append the selected word to the output.
-      alignedTextBuilder.append(majorityWord);
-      if (wordIndex < maxWords - 1) {
+      // Choose a candidate token variant from the texts that has the majority base (preserving original case).
+      String candidate = "";
+      for (int i = 0; i < texts.length; i++) {
+        if (tokenIndex < tokensPerText[i].length) {
+          TokenInfo tokenInfo = tokensPerText[i][tokenIndex];
+          if (tokenInfo.base.toLowerCase().equals(majorityBaseLower)) {
+            candidate = tokenInfo.base;
+            break;
+          }
+        }
+      }
+
+      // Append newline if any token with this base had one.
+      boolean majorityHasNewline = newlineFlag.getOrDefault(majorityBaseLower, false);
+      alignedTokens[tokenIndex] = majorityHasNewline ? candidate + "\n" : candidate;
+    }
+
+    // Reassemble the aligned tokens into a single string.
+    StringBuilder alignedTextBuilder = new StringBuilder();
+    for (int i = 0; i < alignedTokens.length; i++) {
+      String token = alignedTokens[i];
+      if (i > 0 && !alignedTokens[i - 1].endsWith("\n")) {
+        alignedTextBuilder.append(" ");
+      }
+      alignedTextBuilder.append(token);
+      if (token.endsWith("\n") && i < alignedTokens.length - 1) {
+        // If the token ends with a newline and it's not the final token,
+        // append an extra space to preserve a leading space on the next line.
         alignedTextBuilder.append(" ");
       }
     }

@@ -13,7 +13,7 @@ public class TextRestorerTest {
 
     TextRestorer textRestorer = new TextRestorer();
     String result = textRestorer.restoreText(text1, text2, text3);
-    Assertions.assertEquals("hello, this is a sample text. this is a sample text. how are you?", result);
+    Assertions.assertEquals("Hello, this is a sample text. This is a sample text. How are you?", result);
   }
 
   @Test
@@ -24,6 +24,17 @@ public class TextRestorerTest {
 
     TextRestorer textRestorer = new TextRestorer();
     String result = textRestorer.restoreText(text1, text2, text3);
-    Assertions.assertEquals("hello, this is a sample text.\nthis is a sample text. how are you?", result);
+    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you?", result);
+  }
+
+  @Test
+  public void testLineBreaksNoSpace() {
+    String text1 = "Hello, this is a sample text.\nThis is a sample text! How are you? I'm god. How r you?";
+    String text2 = "Hello, this is a. This is a-sample text! How are you? I'm good. How are you?";
+    String text3 = "Hello, this is a sample text.\nThis is a sample text. How are you? I'm good. How are you?";
+
+    TextRestorer textRestorer = new TextRestorer();
+    String result = textRestorer.restoreText(text1, text2, text3);
+    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you?", result);
   }
 }
