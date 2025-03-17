@@ -113,4 +113,22 @@ public class TextSentenceMatcherTest {
     Assertions.assertEquals("How are you?", result[2].texts()[1]);
     Assertions.assertEquals("How are-ywu?", result[2].texts()[2]);
   }
+
+  @Test
+  public void testLineBreaksAndWhiteSpaces() {
+    TextSentenceMatcher textSentenceMatcher = new TextSentenceMatcher();
+    String text1 = "Hello, this is a sample text.\n This is a \nsample text! How are you?\n";
+    String text2 = "Hello, \tthis is a     sampletext.\n This is\n a sample text! How are you?\n";
+    String text3 = "Hello, this is a sample text. This is asample text! How are-ywu?\n";
+    Sentence[] result = textSentenceMatcher.getSentences(text1, text2, text3);
+    Assertions.assertEquals("Hello, this is a sample text.\n", result[0].texts()[0]);
+    Assertions.assertEquals("Hello, \tthis is a     sampletext.\n", result[0].texts()[1]);
+    Assertions.assertEquals("Hello, this is a sample text.", result[0].texts()[2]);
+    Assertions.assertEquals("This is a \nsample text!", result[1].texts()[0]);
+    Assertions.assertEquals("This is\n a sample text!", result[1].texts()[1]);
+    Assertions.assertEquals("This is asample text!", result[1].texts()[2]);
+    Assertions.assertEquals("How are you?\n", result[2].texts()[0]);
+    Assertions.assertEquals("How are you?\n", result[2].texts()[1]);
+    Assertions.assertEquals("How are-ywu?\n", result[2].texts()[2]);
+  }
 }

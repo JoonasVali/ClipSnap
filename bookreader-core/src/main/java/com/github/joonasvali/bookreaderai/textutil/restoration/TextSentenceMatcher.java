@@ -2,7 +2,6 @@ package com.github.joonasvali.bookreaderai.textutil.restoration;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * This class is used to match sentences from multiple texts.
@@ -11,15 +10,62 @@ import java.util.regex.Pattern;
  */
 public class TextSentenceMatcher {
 
-  // Split the text into sentences using a regex that splits on punctuation + whitespace.
+  /**
+   * Splits the input text into sentences.
+   * Linebreaks are treated as normal characters except when they occur
+   * immediately after punctuation as part of the following whitespace – then
+   * they are kept with the sentence ending in the punctuation.
+   */
   private List<String> splitSentences(String text) {
     List<String> sentences = new ArrayList<>();
-    Pattern pattern = Pattern.compile("(?<=[.!?])\\s+");
-    String[] parts = pattern.split(text);
-    for (String part : parts) {
-      sentences.add(part.trim());
+    int n = text.length();
+    int start = 0;
+
+    for (int i = 0; i < n; i++) {
+      char c = text.charAt(i);
+      // Check if c is a sentence-ending punctuation.
+      if (c == '.' || c == '!' || c == '?') {
+        // Advance i to include any consecutive punctuation characters.
+        while (i + 1 < n && (text.charAt(i + 1) == '.' || text.charAt(i + 1) == '!' || text.charAt(i + 1) == '?')) {
+          i++;
+        }
+        int j = i + 1;
+        // Advance j while the characters are spaces or tabs.
+        while (j < n && (text.charAt(j) == ' ' || text.charAt(j) == '\t')) {
+          j++;
+        }
+        // If the very next character is a newline, include it.
+        if (j < n && text.charAt(j) == '\n') {
+          j++; // include the newline with the sentence.
+        }
+        // Extract the sentence from 'start' to j.
+        String sentence = text.substring(start, j);
+        sentences.add(sentence);
+        start = j; // next sentence starts here.
+        i = j - 1; // update i accordingly.
+      }
     }
-    return sentences;
+    // Add any remaining text as a sentence.
+    if (start < n) {
+      String sentence = text.substring(start);
+      sentences.add(sentence);
+    }
+
+    // Post-process each sentence: for every sentence except the first, remove leading spaces/tabs;
+    // and if a sentence does not end with a newline, trim trailing whitespace.
+    List<String> result = new ArrayList<>();
+    for (int i = 0; i < sentences.size(); i++) {
+      String s = sentences.get(i);
+      if (i > 0) {
+        s = s.replaceFirst("^[ \\t]+", "");
+      }
+      if (!s.endsWith("\n")) {
+        s = s.replaceAll("[ \\t]+$", "");
+      }
+      result.add(s);
+    }
+
+    return result;
   }
 
   // A simple similarity score based on common words.
