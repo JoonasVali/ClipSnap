@@ -10,10 +10,11 @@ public class TextRestorerTest {
     String text1 = "Hello, this is a sample text. This is a sample text! How are you? I'm god. How r you?";
     String text2 = "Hello, this is a. This is a-sample text! How are you? I'm good. How are you?";
     String text3 = "Hello, this is a sample text. This is a sample text. How are you? I'm good. How are you?";
+    String text4 = "garbage";
 
     TextRestorer textRestorer = new TextRestorer();
-    String result = textRestorer.restoreText(text1, text2, text3);
-    Assertions.assertEquals("Hello, this is a sample text. This is a sample text. How are you?", result);
+    String result = textRestorer.restoreText(text1, text2, text3, text4);
+    Assertions.assertEquals("Hello, this is a sample text. This is a sample text. How are you? I'm good. How are you?", result);
   }
 
   @Test
@@ -24,7 +25,7 @@ public class TextRestorerTest {
 
     TextRestorer textRestorer = new TextRestorer();
     String result = textRestorer.restoreText(text1, text2, text3);
-    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you?", result);
+    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you? I'm good. How are you?", result);
   }
 
   @Test
@@ -35,6 +36,6 @@ public class TextRestorerTest {
 
     TextRestorer textRestorer = new TextRestorer();
     String result = textRestorer.restoreText(text1, text2, text3);
-    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you?", result);
+    Assertions.assertEquals("Hello, this is a sample text.\nThis is a sample text. How are you? I'm good. How are you?", result);
   }
 }

@@ -20,7 +20,7 @@ public class TextRestorer {
     TextAligner textAligner = new TextAligner();
     StringBuilder finalVersion = new StringBuilder();
 
-    for (int i = 0; i < sentenceCount; i++) {
+    for (int i = 0; i < sentences.length; i++) {
       Sentence sentenceVersions = sentences[i];
       TextAligner.AlignmentResult result = textAligner.alignTexts(sentenceVersions.texts());
       if (!result.isSuccess()) {
