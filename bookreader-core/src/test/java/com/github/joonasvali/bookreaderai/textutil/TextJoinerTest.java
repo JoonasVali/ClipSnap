@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
+import org.jetbrains.annotations.TestOnly;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -138,6 +139,33 @@ public class TextJoinerTest {
     String text2 = "threes. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
     String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable. Max loved that day";
 
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+  @Test
+  public void testJoiningTextWithRepeats() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = """
+        Ladybug, ladybug, fly away home.
+        The cows are in the meadow. The sheep are in the corn.
+        Where is the little logbook? The birds are in the sky. The fish are in the sea.
+        The bees are in the hive. The ants are in the ground.
+        Yard by yard, life is hard. Inch by inch, life's a cinch. kdoakaeo
+        """;
+    String text2 = """
+        Yard by yard, life is hard. Inch by inch, life's a cinch.
+        Ladybug, ladybug, fly away home. The cows are in the meadow. The sheep are in the corn.
+        Where is the little logbook? The birds are in the sky. The fish are in the sea.
+        """;
+    String expected = """
+        Ladybug, ladybug, fly away home.
+        The cows are in the meadow. The sheep are in the corn.
+        Where is the little logbook? The birds are in the sky. The fish are in the sea.
+        The bees are in the hive. The ants are in the ground.
+        Yard by yard, life is hard. Inch by inch, life's a cinch.
+        Ladybug, ladybug, fly away home. The cows are in the meadow. The sheep are in the corn.
+        Where is the little logbook? The birds are in the sky. The fish are in the sea.
+        """;
     assertEquals(expected, joiner.join(text1, text2));
   }
 }

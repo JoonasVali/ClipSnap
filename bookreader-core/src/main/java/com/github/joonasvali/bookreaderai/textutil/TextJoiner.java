@@ -22,7 +22,7 @@ public class TextJoiner {
 
     int commonIndexFirst = -1;
     int commonIndexSecond = -1;
-    outer:
+    // Instead of breaking on the first match, iterate over all pairs so that the last matching pair is recorded.
     for (int i = 0; i < sentences1.length; i++) {
       String s1 = sentences1[i].texts()[0];
       for (int j = 0; j < sentences2.length; j++) {
@@ -30,14 +30,13 @@ public class TextJoiner {
         if (sentencesMatch(s1, s2)) {
           commonIndexFirst = i;
           commonIndexSecond = j;
-          break outer;
         }
       }
     }
 
     if (commonIndexFirst != -1 && commonIndexSecond != -1) {
       // We found a common sentence; build the result by taking all sentences
-      // up to the common sentence from t1, then the rest from t2
+      // up to the common sentence from t1, then the rest from t2.
       List<String> resultSentences = new ArrayList<>();
       for (int i = 0; i <= commonIndexFirst; i++) {
         resultSentences.add(sentences1[i].texts()[0]);
@@ -54,8 +53,6 @@ public class TextJoiner {
     int overlapLength = findOverlap(t1, t2);
     String overlapPart = t2.substring(overlapLength);
     String joined = t1;
-
-    // If the end of t1 and the beginning of overlapPart are not separated by whitespace, insert a space
     if (!t1.isEmpty() && !overlapPart.isEmpty()) {
       char lastCharT1 = t1.charAt(t1.length() - 1);
       char firstCharOverlap = overlapPart.charAt(0);
@@ -109,7 +106,7 @@ public class TextJoiner {
 
   /**
    * Collapses multiple consecutive spaces into a single space **within each line**,
-   * preserving line breaks as-is. Also removes leading spaces on each line.
+   * preserving line breaks as-is. Also removes any leading spaces on each line.
    */
   private String collapseSpacesWithinLines(String text) {
     // Split into lines, fix spacing in each line, then rejoin
