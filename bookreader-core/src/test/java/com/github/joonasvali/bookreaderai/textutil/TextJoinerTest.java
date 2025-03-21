@@ -97,7 +97,8 @@ public class TextJoinerTest {
         and a lot of hard work, you can achieve
         anything you set your mind to. And this is the beginning of a new era.
         The era of the unstoppable force that
-        will change the world forever.""";
+        will change the world forever.
+        """;
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }

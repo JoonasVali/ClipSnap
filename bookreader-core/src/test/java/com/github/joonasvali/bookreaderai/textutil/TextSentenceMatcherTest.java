@@ -16,6 +16,24 @@ public class TextSentenceMatcherTest {
   }
 
   @Test
+  public void testSingleInput2() {
+    String text1 = """
+        Yard by yard, life is hard. Inch by inch, life's a cinch.
+        Ladybug, ladybug, fly away home. The cows are in the meadow. The sheep are in the corn.
+        Where is the little logbook? The birds are in the sky. The fish are in the sea.
+        """;
+    Sentence[] result = new TextSentenceMatcher().getSentences(text1);
+    Assertions.assertEquals("Yard by yard, life is hard.", result[0].texts()[0]);
+    Assertions.assertEquals("Inch by inch, life's a cinch.\n", result[1].texts()[0]);
+    Assertions.assertEquals("Ladybug, ladybug, fly away home.", result[2].texts()[0]);
+    Assertions.assertEquals("The cows are in the meadow.", result[3].texts()[0]);
+    Assertions.assertEquals("The sheep are in the corn.\n", result[4].texts()[0]);
+    Assertions.assertEquals("Where is the little logbook?", result[5].texts()[0]);
+    Assertions.assertEquals("The birds are in the sky.", result[6].texts()[0]);
+    Assertions.assertEquals("The fish are in the sea.\n", result[7].texts()[0]);
+  }
+
+  @Test
   public void testBasic() {
     TextSentenceMatcher textSentenceMatcher = new TextSentenceMatcher();
     String text1 = "Hello, this is a sample text. This is a sample text! How are you?";
