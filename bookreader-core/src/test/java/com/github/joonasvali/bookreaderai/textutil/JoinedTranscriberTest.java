@@ -85,7 +85,8 @@ public class JoinedTranscriberTest {
         The cats are chasing the dog. The dog is running away from the cats.
         The cats are having fun. The dog is having fun too. Listen to the birds chirping. This is a beautiful day.
         The sun is shining. The sky is blue. The clouds are white. The birds are singing.
-        The kids are playing in the park. The parents are watching them. The kids are having fun.""";
+        The kids are playing in the park. The parents are watching them. The kids are having fun.
+        """;
 
     String result = invokeTest(text1, text2, text3);
     assertEquals(expectedResult, result);
