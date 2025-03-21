@@ -1,147 +1,165 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
-/**
- * A class that joins two content snippets together, trying to avoid repeating the same information.
- *
- * This class is 100% AI generated using test-driven development, good luck!
- */
+import com.github.joonasvali.bookreaderai.textutil.restoration.Sentence;
+import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceMatcher;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class TextJoiner {
 
+  /*
+   * Comment: Sentence is just a record: public record Sentence(String[] texts) { }
+   */
   public String join(String text1, String text2) {
-    if (text1 == null) text1 = "";
-    if (text2 == null) text2 = "";
+    // Trim inputs
+    String t1 = text1.trim();
+    String t2 = text2.trim();
 
-    // Remove extra leading/trailing whitespace.
-    String s1 = text1.strip();
-    String s2 = text2.strip();
-    if (s1.isEmpty()) return s2;
-    if (s2.isEmpty()) return s1;
+    // 1) Try sentence-level joining
+    Sentence[] sentences1 = new TextSentenceMatcher().getSentences(t1);
+    Sentence[] sentences2 = new TextSentenceMatcher().getSentences(t2);
 
-    // Normalize s1 for overlap detection.
-    NormalizedResult nr1 = normalize(s1);
-
-    // Try to find the best overlap from s2.
-    Overlap bestOverlap = new Overlap(0, 0, null);
-    // Only consider candidates starting at word boundaries.
-    for (int j = 0; j < s2.length(); j++) {
-      if (j == 0 || Character.isWhitespace(s2.charAt(j - 1))) {
-        String candidate = s2.substring(j);
-        NormalizedResult nrCandidate = normalize(candidate);
-        int common = getCommonOverlap(nr1.normalized, nrCandidate.normalized);
-        if (common > bestOverlap.length) {
-          bestOverlap.length = common;
-          bestOverlap.startInS2 = j;
-          bestOverlap.normCandidate = nrCandidate;
+    int commonIndexFirst = -1;
+    int commonIndexSecond = -1;
+    outer:
+    for (int i = 0; i < sentences1.length; i++) {
+      String s1 = sentences1[i].texts()[0];
+      for (int j = 0; j < sentences2.length; j++) {
+        String s2 = sentences2[j].texts()[0];
+        if (sentencesMatch(s1, s2)) {
+          commonIndexFirst = i;
+          commonIndexSecond = j;
+          break outer;
         }
       }
     }
 
-    // Discard a one-character overlap if it doesn't start at index 0 to avoid false positives.
-    if (bestOverlap.length == 1 && bestOverlap.startInS2 != 0) {
-      bestOverlap.length = 0;
+    if (commonIndexFirst != -1 && commonIndexSecond != -1) {
+      // We found a common sentence; build the result by taking all sentences
+      // up to the common sentence from t1, then the rest from t2
+      List<String> resultSentences = new ArrayList<>();
+      for (int i = 0; i <= commonIndexFirst; i++) {
+        resultSentences.add(sentences1[i].texts()[0]);
+      }
+      for (int j = commonIndexSecond + 1; j < sentences2.length; j++) {
+        resultSentences.add(sentences2[j].texts()[0]);
+      }
+      // Carefully join them, preserving line breaks within each sentence.
+      String joinedSentences = joinWithMinimalExtraSpaces(resultSentences);
+      return collapseSpacesWithinLines(joinedSentences).trim();
     }
 
-    String joined;
-    // If we found a nonzero overlap, remove the overlapped part from s2.
-    if (bestOverlap.length > 0) {
-      int offsetInCandidate = bestOverlap.normCandidate.getOriginalIndexForNormalizedIndex(bestOverlap.length);
-      int joinIndexInS2 = bestOverlap.startInS2 + offsetInCandidate;
-      joined = s1 + s2.substring(joinIndexInS2);
-    } else {
-      // No valid overlap found: join with a space if needed.
-      if (s1.endsWith(" ") || s2.startsWith(" ")) {
-        joined = s1 + s2;
-      } else {
-        joined = s1 + " " + s2;
+    // 2) Fallback: character-based overlap join
+    int overlapLength = findOverlap(t1, t2);
+    String overlapPart = t2.substring(overlapLength);
+    String joined = t1;
+
+    // If the end of t1 and the beginning of overlapPart are not separated by whitespace, insert a space
+    if (!t1.isEmpty() && !overlapPart.isEmpty()) {
+      char lastCharT1 = t1.charAt(t1.length() - 1);
+      char firstCharOverlap = overlapPart.charAt(0);
+      if (!Character.isWhitespace(lastCharT1) && !Character.isWhitespace(firstCharOverlap)) {
+        joined += " ";
       }
     }
+    joined += overlapPart;
 
-    // Fix the ending punctuation if necessary.
-    return fixEndingPunctuation(joined);
+    // Normalize spacing within lines (but preserve line breaks)
+    return collapseSpacesWithinLines(joined).trim();
   }
 
-  // Returns the length (in normalized characters) of the largest overlap where the suffix of norm1
-  // equals the prefix of norm2.
-  private int getCommonOverlap(String norm1, String norm2) {
-    int max = Math.min(norm1.length(), norm2.length());
-    int best = 0;
-    for (int k = 1; k <= max; k++) {
-      String suffix = norm1.substring(norm1.length() - k);
-      String prefix = norm2.substring(0, k);
-      if (suffix.equals(prefix)) {
-        best = k;
-      }
-    }
-    return best;
-  }
-
-  // Normalize a string by removing whitespace and punctuation and converting to lower case.
-  // Only letters and digits are kept.
-  private NormalizedResult normalize(String s) {
+  /**
+   * Joins multiple sentence strings by inserting a single space only if
+   * the end of the current result and the start of the next sentence
+   * are not already separated by whitespace/newlines.
+   */
+  private String joinWithMinimalExtraSpaces(List<String> sentences) {
     StringBuilder sb = new StringBuilder();
-    int[] mapping = new int[s.length()]; // worst-case size
-    int count = 0;
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      if (Character.isLetterOrDigit(c)) {
-        sb.append(Character.toLowerCase(c));
-        mapping[count] = i;
-        count++;
+    for (String sentence : sentences) {
+      if (sb.length() == 0) {
+        // First sentence
+        sb.append(sentence);
+      } else {
+        // If we don't already end with whitespace or newline, and the new sentence
+        // doesn't start with whitespace/newline, then insert a single space
+        if (!endsWithWhitespaceOrNewline(sb) && !startsWithWhitespaceOrNewline(sentence)) {
+          sb.append(' ');
+        }
+        sb.append(sentence);
       }
     }
-    int[] mappingTrunc = new int[count];
-    System.arraycopy(mapping, 0, mappingTrunc, 0, count);
-    return new NormalizedResult(sb.toString(), mappingTrunc);
+    return sb.toString();
   }
 
-  // Helper method to fix ending punctuation:
-  // If the last non-whitespace character is punctuation but not a period, question mark, or exclamation mark,
-  // then replace it with a period.
-  private String fixEndingPunctuation(String text) {
-    int i = text.length() - 1;
-    while (i >= 0 && Character.isWhitespace(text.charAt(i))) {
-      i--;
+  private boolean endsWithWhitespaceOrNewline(StringBuilder sb) {
+    if (sb.length() == 0) {
+      return true;
     }
-    if (i >= 0) {
-      char last = text.charAt(i);
-      // Check if it's punctuation (and not one of . ? !)
-      if (!Character.isLetterOrDigit(last) && last != '.' && last != '?' && last != '!') {
-        text = text.substring(0, i) + "." + text.substring(i + 1);
+    char c = sb.charAt(sb.length() - 1);
+    return Character.isWhitespace(c);
+  }
+
+  private boolean startsWithWhitespaceOrNewline(String str) {
+    if (str.isEmpty()) {
+      return true;
+    }
+    return Character.isWhitespace(str.charAt(0));
+  }
+
+  /**
+   * Collapses multiple consecutive spaces into a single space **within each line**,
+   * preserving line breaks as-is. Also removes leading spaces on each line.
+   */
+  private String collapseSpacesWithinLines(String text) {
+    // Split into lines, fix spacing in each line, then rejoin
+    String[] lines = text.split("\r?\n", -1);
+    for (int i = 0; i < lines.length; i++) {
+      // remove leading spaces
+      lines[i] = lines[i].replaceFirst("^ +", "");
+      // collapse multiple spaces
+      lines[i] = lines[i].replaceAll(" +", " ");
+    }
+    return String.join("\n", lines);
+  }
+
+  /**
+   * Returns true if two sentences match when normalized (ignoring case, extra whitespace and punctuation).
+   */
+  private boolean sentencesMatch(String s1, String s2) {
+    if (s1 == null || s2 == null) {
+      return false;
+    }
+    return normalize(s1).equals(normalize(s2));
+  }
+
+  /**
+   * Finds the maximum overlap length between the end of string 'a' and the beginning of string 'b'
+   * by comparing normalized substrings.
+   */
+  private int findOverlap(String a, String b) {
+    int max = Math.min(a.length(), b.length());
+    for (int k = max; k > 0; k--) {
+      String subA = a.substring(a.length() - k);
+      String subB = b.substring(0, k);
+      if (normalizedEquals(subA, subB)) {
+        return k;
       }
     }
-    return text;
+    return 0;
   }
 
-  // Helper class that holds a normalized version of a string along with a mapping from each
-  // character in the normalized string back to its index in the original string.
-  private static class NormalizedResult {
-    String normalized;
-    // mapping[i] gives the index in the original string of the i-th character in normalized.
-    int[] mapping;
-
-    NormalizedResult(String normalized, int[] mapping) {
-      this.normalized = normalized;
-      this.mapping = mapping;
-    }
-
-    // Given a normalized overlap length (number of normalized characters),
-    // return the corresponding offset in the original string.
-    int getOriginalIndexForNormalizedIndex(int normIndex) {
-      if (normIndex == 0) return 0;
-      return mapping[normIndex - 1] + 1;
-    }
+  /**
+   * Compares two strings after normalization.
+   */
+  private boolean normalizedEquals(String x, String y) {
+    return normalize(x).equals(normalize(y));
   }
 
-  // Helper class to store details about an overlap candidate.
-  private static class Overlap {
-    int length;           // overlap length (in normalized characters)
-    int startInS2;        // starting index in s2 (the original trimmed s2) for the candidate
-    NormalizedResult normCandidate; // normalized result for the candidate substring
-
-    Overlap(int length, int startInS2, NormalizedResult normCandidate) {
-      this.length = length;
-      this.startInS2 = startInS2;
-      this.normCandidate = normCandidate;
-    }
+  /**
+   * Normalizes the string by converting it to lowercase and removing whitespace and punctuation.
+   */
+  private String normalize(String s) {
+    return s.toLowerCase().replaceAll("[\\s\\p{Punct}]+", "");
   }
 }

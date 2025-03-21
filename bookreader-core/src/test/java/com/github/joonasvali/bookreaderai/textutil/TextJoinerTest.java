@@ -28,9 +28,9 @@ public class TextJoinerTest {
   @Test
   public void testTextJoinerWithSplitWordIgnoringCase() {
     TextJoiner textJoiner = new TextJoiner();
-    String text1 = "The quick brown fox JUM";
-    String text2 = "mps over the lazy dog.";
-    String expected = "The quick brown fox JUMps over the lazy dog.";
+    String text1 = "The quick brown fox jumps";
+    String text2 = "jum PS over the lazy dog.";
+    String expected = "The quick brown fox jumps over the lazy dog.";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -38,9 +38,9 @@ public class TextJoinerTest {
   @Test
   public void testTextJoinerWithSplitWordAndWhitespace() {
     TextJoiner textJoiner = new TextJoiner();
-    String text1 = "The quick brown fox jum ";
-    String text2 = " mps over the lazy dog.";
-    String expected = "The quick brown fox jumps over the lazy dog.";
+    String text1 = "Let it be known, that the quick brown fox jumps";
+    String text2 = "brownfox jumps over the lazy dog.";
+    String expected = "Let it be known, that the quick brown fox jumps over the lazy dog.";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -70,7 +70,7 @@ public class TextJoinerTest {
     TextJoiner textJoiner = new TextJoiner();
     String text1 = "A journey of a thous and miles begins with";
     String text2 = "thousand miles. begins with a single step,";
-    String expected = "A journey of a thous and miles begins with a single step.";
+    String expected = "A journey of a thous and miles begins with a single step,";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -92,11 +92,11 @@ public class TextJoinerTest {
         """;
     String expected = """
         A journey of a thousand miles begins with
-          a single step. With a little bit of luck
-          and a lot of hard work, you can achieve
-          anything you set your mind to. And this is the beginning of a new era.
-          The era of the unstoppable force that
-          will change the world forever.""";
+        a single step. With a little bit of luck
+        and a lot of hard work, you can achieve
+        anything you set your mind to. And this is the beginning of a new era.
+        The era of the unstoppable force that
+        will change the world forever.""";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -119,5 +119,25 @@ public class TextJoinerTest {
     String expected = "Cakes that are delicious and healthy are delicious and bad for your health";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
+  }
+
+  @Test
+  public void testJoinStoryWithTranscriptionErrors() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. the had fub";
+    String text2 = "threes. he tried to climb. They had fun and became inseparable. Max loved that day";
+    String expected = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and became inseparable. Max loved that day";
+
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+  @Test
+  public void testJoinStoryWithTranscriptionErrorsAndCasingDifference() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. THEY had fub";
+    String text2 = "threes. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
+    String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable. Max loved that day";
+
+    assertEquals(expected, joiner.join(text1, text2));
   }
 }

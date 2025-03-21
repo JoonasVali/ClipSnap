@@ -7,6 +7,15 @@ import org.junit.jupiter.api.Test;
 
 public class TextSentenceMatcherTest {
   @Test
+  public void testSingleInput() {
+    String text1 = "Hello, this is a sample text. This is a sample text! How are you?";
+    Sentence[] result = new TextSentenceMatcher().getSentences(text1);
+    Assertions.assertEquals("Hello, this is a sample text.", result[0].texts()[0]);
+    Assertions.assertEquals("This is a sample text!", result[1].texts()[0]);
+    Assertions.assertEquals("How are you?", result[2].texts()[0]);
+  }
+
+  @Test
   public void testBasic() {
     TextSentenceMatcher textSentenceMatcher = new TextSentenceMatcher();
     String text1 = "Hello, this is a sample text. This is a sample text! How are you?";
