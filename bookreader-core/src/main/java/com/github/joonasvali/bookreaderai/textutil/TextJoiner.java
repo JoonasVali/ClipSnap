@@ -11,7 +11,7 @@ import java.util.Set;
 
 public class TextJoiner {
 
-  public static final float MIN_SCORE_FOR_TOUCHING_SENTENCE = 0.2f;
+  public static final float MIN_SCORE_FOR_TOUCHING_SENTENCE = 0.1f;
   // Use the fuzzy matcher for sentence comparison.
   private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
 
@@ -172,10 +172,14 @@ public class TextJoiner {
     }
 
     public float getCalculatedScore() {
+      float penalty1 = score * (0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
+      float penalty2 = score * discardedWords / countWords(commonSentence);
+      float calcScore = Math.max(0.01f, score - penalty1 - penalty2);
+
       if (firstTextSentenceOffset == 0 && secondTextSentenceOffset == 0) {
-        return Math.max(score, MIN_SCORE_FOR_TOUCHING_SENTENCE);
+        calcScore = Math.max(calcScore, MIN_SCORE_FOR_TOUCHING_SENTENCE);
       }
-      return Math.max(0.01f, score - 0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
+      return calcScore;
     }
   }
 }
