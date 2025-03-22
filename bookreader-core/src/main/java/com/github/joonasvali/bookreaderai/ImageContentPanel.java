@@ -236,7 +236,7 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
+    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));

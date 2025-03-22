@@ -55,7 +55,6 @@ public class TranscribeFixerAgent {
     var firstUsage = chatCompletion.usage().orElse(ZERO_USAGE);
 
     var firstOutput = firstResult.message().content().orElse("-No content-");
-    System.out.println(firstOutput);
 
     if (firstOutput.equals("-No content-")) {
       throw new RuntimeException("Failed to fix the content.");

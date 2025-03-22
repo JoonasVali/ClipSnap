@@ -169,4 +169,31 @@ public class TextJoinerTest {
         """;
     assertEquals(expected, joiner.join(text1, text2));
   }
+
+  @Test
+  public void testJoiningTextWithRepeats2() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = """
+        31st of July. 1941.
+        apple banana cherry.
+        DOG CAT BIR…
+        """;
+
+    String text2 = """
+        DOG CAT BIRD
+        1st of August. 1941.
+        FISH HORSE MOUSE
+        BEAR WOLF FOX
+        """;
+
+    String expected = """
+        31st of July. 1941.
+        apple banana cherry.
+        DOG CAT BIRD
+        1st of August. 1941.
+        FISH HORSE MOUSE
+        BEAR WOLF FOX
+        """;
+    assertEquals(expected, joiner.join(text1, text2));
+  }
 }

@@ -80,11 +80,20 @@ public class JoinedTranscriber {
   }
 
   private String join(List<String> results) {
+    if (results.size() == 1) {
+      return results.getFirst();
+    }
+    logger.debug("Joining {} texts", results.size());
+
     TextJoiner joiner = new TextJoiner();
     String joinedText = results.getFirst();
 
+    logger.debug("(1/"  + results.size() + ")" + "First text: {}", joinedText);
     for (int i = 1; i < results.size(); i++) {
+      String indicator = "(" + (i + 1) +"/"  + results.size() + ")";
+      logger.debug(indicator + " Joining with text: {}", results.get(i));
       joinedText = joiner.join(joinedText, results.get(i));
+      logger.debug(indicator + "Result after joining: {}", joinedText);
     }
 
     return joinedText;
