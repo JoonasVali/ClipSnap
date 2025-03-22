@@ -142,6 +142,18 @@ public class TextJoinerTest {
     assertEquals(expected, joiner.join(text1, text2));
   }
 
+
+  @Test
+  public void testJoinStoryWithNoMatch() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees.";
+    String text2 = "He tried TO climb. They had fun and BECAME inseparable. Max loved that day";
+    String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried TO climb. They had fun and BECAME inseparable. Max loved that day";
+
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+
   @Test
   public void testJoiningTextWithRepeats() {
     TextJoiner joiner = new TextJoiner();
@@ -193,6 +205,67 @@ public class TextJoinerTest {
         1st of August. 1941.
         FISH HORSE MOUSE
         BEAR WOLF FOX
+        """;
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+  @Test
+  public void testDoubleMatch() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = """
+        Ladybug, ladybug, fly away home.
+        Whistle while you work.
+        red blue green.
+        PINK PURPLE ORANGE.
+        Whistle while you wo
+        """;
+
+    String text2 = """
+        Whistle while you work.
+        Danger is my middle name.
+        FISH HORSE MOUSE
+        """;
+
+    // 1941. is not expected to be joined. DOG CAT BIR… and DOG CAT BIRD are expected to be joined.
+    String expected = """
+        Ladybug, ladybug, fly away home.
+        Whistle while you work.
+        red blue green.
+        PINK PURPLE ORANGE.
+        Whistle while you work.
+        Danger is my middle name.
+        FISH HORSE MOUSE
+        """;
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+
+  @Test
+  public void testDoubleMatchWithSentenceHavingExtraWordsOnPreviousLine() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = """
+        Ladybug, ladybug, fly away home.
+        Whistle while you work.
+        red blue green.
+        PINK PURPLE ORANGE
+        Whistle while you wo...
+        """;
+
+    String text2 = """
+        Whistle while you work.
+        Danger is my middle name.
+        FISH HORSE MOUSE
+        """;
+
+    // 1941. is not expected to be joined. DOG CAT BIR… and DOG CAT BIRD are expected to be joined.
+    String expected = """
+        Ladybug, ladybug, fly away home.
+        Whistle while you work.
+        red blue green.
+        PINK PURPLE ORANGE
+        Whistle while you work.
+        Danger is my middle name.
+        FISH HORSE MOUSE
         """;
     assertEquals(expected, joiner.join(text1, text2));
   }
