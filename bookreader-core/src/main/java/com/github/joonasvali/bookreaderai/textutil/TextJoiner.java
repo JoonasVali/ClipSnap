@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 
 public class TextJoiner {
-
-  public static final float MIN_SCORE_FOR_TOUCHING_SENTENCE = 0.1f;
   // Use the fuzzy matcher for sentence comparison.
   private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
 
@@ -20,7 +18,7 @@ public class TextJoiner {
     Sentence[] sentences1 = new TextSentenceMatcher().getSentences(text1);
     Sentence[] sentences2 = new TextSentenceMatcher().getSentences(text2);
 
-    String[] result = join(
+    PotentialResult[] potentialResults = join(
         Arrays.stream(sentences1)
             .map(Sentence::texts)
             .flatMap(Arrays::stream)
@@ -30,6 +28,8 @@ public class TextJoiner {
             .flatMap(Arrays::stream)
             .toArray(String[]::new)
     );
+
+    String[] result = potentialResults != null ? potentialResults[0].sentences : null;
 
     if (result == null) {
       result = new String[] { text1 + " " + text2 };
@@ -49,7 +49,7 @@ public class TextJoiner {
         .orElse("");
   }
 
-  private String[] join(String[] sentences1, String[] sentences2) {
+  private PotentialResult[] join(String[] sentences1, String[] sentences2) {
     System.out.println("Sentences1: " + Arrays.toString(sentences1));
     System.out.println("Sentences2: " + Arrays.toString(sentences2));
 
@@ -80,7 +80,7 @@ public class TextJoiner {
 
           for (String sentence : candidateCommonSentence) {
             String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
-            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, discardedWordsFirst + discardedWordsSecond);
+            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, discardedWordsFirst + discardedWordsSecond, firstSentence, secondSentence);
             potentialResultList.add(potentialResult);
           }
         }
@@ -90,23 +90,26 @@ public class TextJoiner {
     boolean hasOnlyTouchingSentenceWithNoMatch =
         potentialResultList.size() == 1 &&
         // 50%+ of words are discarded as a result of the join
-        potentialResultList.getFirst().discardedWords >= countWords(potentialResultList.getFirst().commonSentence) * 0.5f &&
+        potentialResultList.getFirst().discardedWords >= (countWords(potentialResultList.getFirst().commonSentence) + potentialResultList.getFirst().discardedWords) * 0.5f &&
         potentialResultList.getFirst().firstTextSentenceOffset == 0 &&
         potentialResultList.getFirst().secondTextSentenceOffset == 0 &&
-        potentialResultList.getFirst().score < MIN_SCORE_FOR_TOUCHING_SENTENCE;
+        potentialResultList.getFirst().evaluatedScore < 0.2f;
 
     if (potentialResultList.isEmpty() || hasOnlyTouchingSentenceWithNoMatch) {
       return null;
     }
 
-    // Get the one with max score:
-    return potentialResultList
+    double maxScore = potentialResultList
         .stream()
+        .mapToDouble(PotentialResult::getCalculatedScore).max().orElse(0);
 
-        .max((r1, r2) -> Float.compare(r1.getCalculatedScore(), r2.getCalculatedScore()))
-        .map(r -> r.sentences)
-        .orElse(null);
+    // Get the ones with max score:
+    PotentialResult[] maxScored = potentialResultList
+        .stream()
+        .filter(r -> r.getCalculatedScore() >= maxScore - 0.00001)
+        .toArray(PotentialResult[]::new);
 
+    return maxScored;
   }
 
   private int countWords(String commonSentence) {
@@ -156,28 +159,32 @@ public class TextJoiner {
   private class PotentialResult {
     private String[] sentences;
     private String commonSentence;
-    private float score;
+    private float evaluatedScore;
     private int firstTextSentenceOffset;
     private int secondTextSentenceOffset;
     private int discardedWords;
+    private String firstSentence;
+    private String secondSentence;
 
-    public PotentialResult(String[] sentences, String commonSentence, float score, int firstTextSentenceOffset, int secondTextSentenceOffset, int discardedWords) {
+    public PotentialResult(String[] sentences, String commonSentence, float evaluatedScore, int firstTextSentenceOffset, int secondTextSentenceOffset, int discardedWords, String firstSentence, String secondSentence) {
       this.sentences = sentences;
       this.commonSentence = commonSentence;
-      this.score = score;
+      this.evaluatedScore = evaluatedScore;
 
       this.firstTextSentenceOffset = firstTextSentenceOffset;
       this.secondTextSentenceOffset = secondTextSentenceOffset;
       this.discardedWords = discardedWords;
+      this.firstSentence = firstSentence;
+      this.secondSentence = secondSentence;
     }
 
     public float getCalculatedScore() {
-      float penalty1 = score * (0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
-      float penalty2 = score * discardedWords / countWords(commonSentence);
-      float calcScore = Math.max(0.01f, score - penalty1 - penalty2);
+      float penalty1 = evaluatedScore * (0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
+      float penalty2 = evaluatedScore * discardedWords / countWords(commonSentence);
+      float calcScore = Math.max(0.01f, evaluatedScore - penalty1 - penalty2);
 
       if (firstTextSentenceOffset == 0 && secondTextSentenceOffset == 0) {
-        calcScore = Math.max(calcScore, MIN_SCORE_FOR_TOUCHING_SENTENCE);
+        calcScore = Math.max(calcScore, 0.1f);
       }
       return calcScore;
     }

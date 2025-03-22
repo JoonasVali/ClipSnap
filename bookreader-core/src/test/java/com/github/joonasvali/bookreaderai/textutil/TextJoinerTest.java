@@ -79,22 +79,23 @@ public class TextJoinerTest {
   public void testTextJoinerWithMultipleLines() {
     TextJoiner textJoiner = new TextJoiner();
     String text1 = """
-          A journey of a thousand miles begins with
-          a single step. With a little bit of luck
-          and a lot of hard work, you can achieve
-          anything you set your mind to. And this
+        A journey of a thousand miles begins with
+        a single step. With a little bit of luck
+        and a lot of hard work, you can achieve
+        anything you set your mind to. And this
         """;
     String text2 = """
-          Anything you set Your mind to.
-          And this is the beginning of a new era.
-          The era of the unstoppable force that
-          will change the world forever.
+        Anything you set Your mind to.
+        And this is the beginning of a new era.
+        The era of the unstoppable force that
+        will change the world forever.
         """;
     String expected = """
         A journey of a thousand miles begins with
         a single step. With a little bit of luck
         and a lot of hard work, you can achieve
-        anything you set your mind to. And this is the beginning of a new era.
+        Anything you set Your mind to.
+        And this is the beginning of a new era.
         The era of the unstoppable force that
         will change the world forever.
         """;
