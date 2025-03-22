@@ -18,7 +18,7 @@ public class SentencePotentialMatcher {
    */
   public MatchResult match(String s1, String s2) {
     if (s1 == null || s2 == null) {
-      return new MatchResult(0.0, "", "", "");
+      return new MatchResult(0.0f, "", "", "");
     }
 
     // Build normalized versions with mapping.
@@ -26,12 +26,12 @@ public class SentencePotentialMatcher {
     NormalizedString ns2 = normalizeWithMapping(s2);
 
     if (ns1.normalized.isEmpty() || ns2.normalized.isEmpty()) {
-      return new MatchResult(0.0, "", "", "");
+      return new MatchResult(0.0f, "", "", "");
     }
 
     // If the normalized strings are exactly equal, return full match.
     if (ns1.normalized.equals(ns2.normalized)) {
-      return new MatchResult(1.0, s1, "", "");
+      return new MatchResult(1.0f, s1, "", "");
     }
 
     // First, try fuzzy containment: does one normalized string (almost) appear inside the other?
@@ -46,7 +46,7 @@ public class SentencePotentialMatcher {
       s1IsContained = false; // in this case, s2 is the contained one.
     }
 
-    double score;
+    float score;
     String commonPart;
     String prefix;
     String suffix;
@@ -74,7 +74,7 @@ public class SentencePotentialMatcher {
     } else {
       // Fallback: use exact longest common substring (LCS) on the normalized strings.
       LCSResult lcsRes = getLongestCommonSubstring(ns1.normalized, ns2.normalized);
-      score = Math.max(0.0, (double) lcsRes.length / Math.max(ns1.normalized.length(), ns2.normalized.length()));
+      score = (float)Math.max(0.0, (double) lcsRes.length / Math.max(ns1.normalized.length(), ns2.normalized.length()));
       if (lcsRes.length == 0) {
         return new MatchResult(score, "", "", "");
       }
@@ -96,14 +96,14 @@ public class SentencePotentialMatcher {
    * Returns a FuzzyContainmentResult if the best similarity is above a threshold; otherwise, returns null.
    */
   private FuzzyContainmentResult fuzzyContainment(String shortStr, String longStr) {
-    double bestSim = 0.0;
+    float bestSim = 0.0f;
     int bestIndex = -1;
     int windowLen = shortStr.length();
     for (int i = 0; i <= longStr.length() - windowLen; i++) {
       String window = longStr.substring(i, i + windowLen);
       double sim = levenshteinSimilarity(shortStr, window);
       if (sim > bestSim) {
-        bestSim = sim;
+        bestSim = (float)sim;
         bestIndex = i;
       }
       if (bestSim >= 0.9) {
@@ -225,12 +225,12 @@ public class SentencePotentialMatcher {
    * Result type returned by match().
    */
   public static class MatchResult {
-    public final double score;
+    public final float score;
     public final String commonPart;
     public final String prefix; // the part before the common part
     public final String suffix; // the part after the common part
 
-    public MatchResult(double score, String commonPart, String prefix, String suffix) {
+    public MatchResult(float score, String commonPart, String prefix, String suffix) {
       this.score = score;
       this.commonPart = commonPart;
       this.prefix = prefix;
@@ -252,10 +252,10 @@ public class SentencePotentialMatcher {
    * Helper type for fuzzy containment results.
    */
   private static class FuzzyContainmentResult {
-    final double similarity;
+    final float similarity;
     final int startIndex;  // starting index in the container's normalized string
 
-    FuzzyContainmentResult(double similarity, int startIndex) {
+    FuzzyContainmentResult(float similarity, int startIndex) {
       this.similarity = similarity;
       this.startIndex = startIndex;
     }

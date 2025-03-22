@@ -165,7 +165,6 @@ public class SentencePotentialMatcherTest {
     SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
     SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
 
-    System.out.println(result1.score);
     assertTrue(result1.score >= 0.9, "Mistyped word should have a higher score, got: " + result1.score);
     assertTrue(result2.score >= 0.9, "Mistyped word should have a higher score, got: " + result2.score);
 
@@ -178,4 +177,23 @@ public class SentencePotentialMatcherTest {
     assertEquals("", result2.suffix);
   }
 
+
+  @Test
+  public void testPunctuation() {
+    String s1 = "Gods are not to be mocked!";
+    String s2 = "Gods are, not to: be mocked.";
+    SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
+    SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
+
+    assertTrue(result1.score >= 0.9, "Mistyped word should have a higher score, got: " + result1.score);
+    assertTrue(result2.score >= 0.9, "Mistyped word should have a higher score, got: " + result2.score);
+
+    assertEquals("", result1.prefix);
+    assertEquals("Gods are not to be mocked!", result1.commonPart);
+    assertEquals("", result1.suffix);
+
+    assertEquals("", result2.prefix);
+    assertEquals("Gods are, not to: be mocked.", result2.commonPart);
+    assertEquals("", result2.suffix);
+  }
 }
