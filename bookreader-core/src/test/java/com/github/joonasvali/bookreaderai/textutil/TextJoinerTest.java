@@ -1,6 +1,5 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
-import org.jetbrains.annotations.TestOnly;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -128,7 +127,7 @@ public class TextJoinerTest {
     TextJoiner joiner = new TextJoiner();
     String text1 = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. the had fub";
     String text2 = "threes. he tried to climb. They had fun and became inseparable. Max loved that day";
-    String expected = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and became inseparable. Max loved that day";
+    String expected = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. he tried to climb. They had fun and became inseparable. Max loved that day";
 
     assertEquals(expected, joiner.join(text1, text2));
   }
@@ -138,7 +137,7 @@ public class TextJoinerTest {
     TextJoiner joiner = new TextJoiner();
     String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. THEY had fub";
     String text2 = "threes. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
-    String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable. Max loved that day";
+    String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
 
     assertEquals(expected, joiner.join(text1, text2));
   }
@@ -171,7 +170,7 @@ public class TextJoinerTest {
   }
 
   @Test
-  public void testJoiningTextWithRepeats2() {
+  public void testJoiningTextWithPartialMatchWhileThereIsFullMatchBeforeThat() {
     TextJoiner joiner = new TextJoiner();
     String text1 = """
         31st of July. 1941.
@@ -186,6 +185,7 @@ public class TextJoinerTest {
         BEAR WOLF FOX
         """;
 
+    // 1941. is not expected to be joined. DOG CAT BIR… and DOG CAT BIRD are expected to be joined.
     String expected = """
         31st of July. 1941.
         apple banana cherry.

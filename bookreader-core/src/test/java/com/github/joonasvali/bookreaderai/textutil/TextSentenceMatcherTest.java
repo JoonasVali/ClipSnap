@@ -34,6 +34,20 @@ public class TextSentenceMatcherTest {
   }
 
   @Test
+  public void testSingleInput3() {
+    String text1 = """
+        DOG CAT BIRD
+        1st of August. 1941.
+        FISH HORSE MOUSE
+        BEAR WOLF FOX
+        """;
+    Sentence[] result = new TextSentenceMatcher().getSentences(text1);
+    Assertions.assertEquals("DOG CAT BIRD\n1st of August.", result[0].texts()[0]);
+    Assertions.assertEquals("1941.\n", result[1].texts()[0]);
+    Assertions.assertEquals("FISH HORSE MOUSE\nBEAR WOLF FOX\n", result[2].texts()[0]);
+  }
+
+  @Test
   public void testBasic() {
     TextSentenceMatcher textSentenceMatcher = new TextSentenceMatcher();
     String text1 = "Hello, this is a sample text. This is a sample text! How are you?";

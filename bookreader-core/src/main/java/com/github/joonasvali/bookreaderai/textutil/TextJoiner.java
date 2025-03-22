@@ -2,7 +2,6 @@ package com.github.joonasvali.bookreaderai.textutil;
 
 import com.github.joonasvali.bookreaderai.textutil.restoration.Sentence;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceMatcher;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -10,8 +9,13 @@ import java.util.regex.Pattern;
 
 public class TextJoiner {
 
+  // Use the fuzzy matcher for sentence comparison.
+  private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
+  // Threshold for considering two sentences a match.
+  private static final double MATCH_THRESHOLD = 0.8;
+
   public String join(String text1, String text2) {
-    // Remove trailing whitespace from text1, but keep internal newlines.
+    // Remove trailing whitespace from text1 (but keep internal newlines).
     String t1 = text1.stripTrailing();
     // Use text2 as-is so that any embedded newlines are preserved.
     String t2 = text2;
@@ -22,12 +26,16 @@ public class TextJoiner {
 
     int commonIndexFirst = -1;
     int commonIndexSecond = -1;
-    // Find the last matching sentence pair
+    // Find the last matching sentence pair using fuzzy matching.
     for (int i = 0; i < sentences1.length; i++) {
       String s1 = sentences1[i].texts()[0];
       for (int j = 0; j < sentences2.length; j++) {
         String s2 = sentences2[j].texts()[0];
-        if (sentencesMatch(s1, s2)) {
+        // When s2 contains a newline, use only its first line for matching.
+        String s2FirstLine = s2.contains("\n") ? s2.split("\n", 2)[0] : s2;
+        double score = fuzzyMatcher.matchScore(s1, s2FirstLine);
+        if (score >= MATCH_THRESHOLD) {
+          // Later matches override earlier ones.
           commonIndexFirst = i;
           commonIndexSecond = j;
         }
@@ -47,9 +55,10 @@ public class TextJoiner {
         resultSentencesT2.add(sentences2[j].texts()[0]);
       }
 
-      // Merge the common sentence if text2's version is longer.
+      // Process the common sentence:
       String commonT1 = resultSentencesT1.get(resultSentencesT1.size() - 1);
       String commonT2 = sentences2[commonIndexSecond].texts()[0];
+      // Instead of splitting off only the first line from text2's sentence, we let mergeCommonSentence decide.
       String mergedCommon = mergeCommonSentence(commonT1, commonT2);
       resultSentencesT1.set(resultSentencesT1.size() - 1, mergedCommon);
 
@@ -64,15 +73,12 @@ public class TextJoiner {
       } else {
         joinedSentences = joinedPart1 + joinedPart2;
       }
-
       return collapseSpacesWithinLines(joinedSentences);
     }
 
     // 2) Fallback: character-based overlap join
-    // --- NEW CODE: Adjust t2 if it starts with duplicate content.
     String adjustedT2 = t2;
     String lastWordT1 = extractLastWord(t1);
-    // Pattern matches optional whitespace, an optional "AND" plus whitespace, then a word, then the rest.
     Pattern p = Pattern.compile("^\\s*(?:AND\\s+)?(\\S+)(.*)$", Pattern.CASE_INSENSITIVE);
     Matcher m = p.matcher(adjustedT2);
     if (m.find()) {
@@ -99,14 +105,11 @@ public class TextJoiner {
 
   /**
    * Merges the two versions of the common sentence.
-   * If the normalized version of s2 starts with s1 (ignoring case, whitespace, and punctuation)
-   * and is longer, then s2 is considered the fuller version and is returned.
-   * Otherwise, s1 is returned.
+   * If the fuzzy match score between s1 and s2 is at or above the threshold,
+   * then we return s2 (i.e. the fuller version). Otherwise, we return s1.
    */
   private String mergeCommonSentence(String s1, String s2) {
-    String n1 = normalize(s1);
-    String n2 = normalize(s2);
-    if (n2.startsWith(n1) && s2.length() > s1.length()) {
+    if (fuzzyMatcher.matchScore(s1, s2) >= MATCH_THRESHOLD) {
       return s2;
     }
     return s1;
@@ -175,14 +178,6 @@ public class TextJoiner {
     return String.join("\n", lines);
   }
 
-  private boolean sentencesMatch(String s1, String s2) {
-    if (s1 == null || s2 == null) return false;
-    String n1 = normalize(s1);
-    String n2 = normalize(s2);
-    // Allow exact match or prefix match.
-    return n1.equals(n2) || n1.startsWith(n2) || n2.startsWith(n1);
-  }
-
   private int findOverlap(String a, String b) {
     int max = Math.min(a.length(), b.length());
     for (int k = max; k > 0; k--) {
@@ -203,7 +198,7 @@ public class TextJoiner {
     return s.toLowerCase().replaceAll("[\\s\\p{Punct}]+", "");
   }
 
-  // NEW HELPER: extracts the last word from a string (splitting on whitespace)
+  // Helper: extracts the last word from a string (splitting on whitespace)
   private String extractLastWord(String s) {
     s = s.trim();
     String[] parts = s.split("\\s+");
