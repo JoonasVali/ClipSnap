@@ -11,15 +11,14 @@ import java.util.Set;
 
 public class TextJoiner {
 
+  public static final float MIN_SCORE_FOR_TOUCHING_SENTENCE = 0.2f;
   // Use the fuzzy matcher for sentence comparison.
   private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
 
   public String join(String text1, String text2) {
-    String t1 = text1.stripTrailing();
-    String t2 = text2.stripTrailing();
 
-    Sentence[] sentences1 = new TextSentenceMatcher().getSentences(t1);
-    Sentence[] sentences2 = new TextSentenceMatcher().getSentences(t2);
+    Sentence[] sentences1 = new TextSentenceMatcher().getSentences(text1);
+    Sentence[] sentences2 = new TextSentenceMatcher().getSentences(text2);
 
     String[] result = join(
         Arrays.stream(sentences1)
@@ -33,7 +32,7 @@ public class TextJoiner {
     );
 
     if (result == null) {
-      result = new String[] { t1 + " " + t2 };
+      result = new String[] { text1 + " " + text2 };
     }
 
     return sentencesToString(result);
@@ -71,6 +70,9 @@ public class TextJoiner {
           Set<String> candidateCommonSentence = new HashSet<>();
           candidateCommonSentence.add(newSentence);
 
+          int discardedWordsFirst = countDiscardedWords(firstSentence, result.prefix + result.commonPart);
+          int discardedWordsSecond = countDiscardedWords(secondSentence, result.commonPart + result.suffix);
+
           if (removePunctuationAndWhiteSpace(result.prefix).isEmpty() && removePunctuationAndWhiteSpace(result.suffix).isEmpty()) {
             candidateCommonSentence.add(firstSentence);
             candidateCommonSentence.add(secondSentence);
@@ -78,13 +80,22 @@ public class TextJoiner {
 
           for (String sentence : candidateCommonSentence) {
             String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
-            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset);
+            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, discardedWordsFirst + discardedWordsSecond);
             potentialResultList.add(potentialResult);
           }
         }
       }
     }
-    if (potentialResultList.isEmpty()) {
+
+    boolean hasOnlyTouchingSentenceWithNoMatch =
+        potentialResultList.size() == 1 &&
+        // 50%+ of words are discarded as a result of the join
+        potentialResultList.getFirst().discardedWords >= countWords(potentialResultList.getFirst().commonSentence) * 0.5f &&
+        potentialResultList.getFirst().firstTextSentenceOffset == 0 &&
+        potentialResultList.getFirst().secondTextSentenceOffset == 0 &&
+        potentialResultList.getFirst().score < MIN_SCORE_FOR_TOUCHING_SENTENCE;
+
+    if (potentialResultList.isEmpty() || hasOnlyTouchingSentenceWithNoMatch) {
       return null;
     }
 
@@ -97,6 +108,29 @@ public class TextJoiner {
         .orElse(null);
 
   }
+
+  private int countWords(String commonSentence) {
+    if (commonSentence == null) {
+      return 0;
+    }
+    return commonSentence.replaceAll("[\\p{Punct}]", "").split("\\s+").length;
+  }
+
+  private int countDiscardedWords(String sentence, String match) {
+    if (sentence == null || match == null) {
+      return 0;
+    }
+    // Remove punctuation and convert to lowercase for both the sentence and the match string.
+    String cleanedSentence = sentence.replaceAll("[\\p{Punct}]", "").toLowerCase();
+    String cleanedMatch = match.replaceAll("[\\p{Punct}]", "").toLowerCase();
+
+    // Split the cleaned sentence by whitespace.
+    String[] words = cleanedSentence.split("\\s+");
+    String[] matchingWords = cleanedMatch.split("\\s+");
+
+    return words.length - matchingWords.length;
+  }
+
 
   private String removePunctuationAndWhiteSpace(String prefix) {
     return prefix.replaceAll("[^a-zA-Z0-9]", "");
@@ -125,19 +159,21 @@ public class TextJoiner {
     private float score;
     private int firstTextSentenceOffset;
     private int secondTextSentenceOffset;
+    private int discardedWords;
 
-    public PotentialResult(String[] sentences, String commonSentence, float score, int firstTextSentenceOffset, int secondTextSentenceOffset) {
+    public PotentialResult(String[] sentences, String commonSentence, float score, int firstTextSentenceOffset, int secondTextSentenceOffset, int discardedWords) {
       this.sentences = sentences;
       this.commonSentence = commonSentence;
       this.score = score;
 
       this.firstTextSentenceOffset = firstTextSentenceOffset;
       this.secondTextSentenceOffset = secondTextSentenceOffset;
+      this.discardedWords = discardedWords;
     }
 
     public float getCalculatedScore() {
       if (firstTextSentenceOffset == 0 && secondTextSentenceOffset == 0) {
-        return Math.max(score, 0.2f);
+        return Math.max(score, MIN_SCORE_FOR_TOUCHING_SENTENCE);
       }
       return Math.max(0.01f, score - 0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
     }
