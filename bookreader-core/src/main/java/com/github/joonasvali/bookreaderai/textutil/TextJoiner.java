@@ -2,6 +2,7 @@ package com.github.joonasvali.bookreaderai.textutil;
 
 import com.github.joonasvali.bookreaderai.textutil.restoration.Sentence;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceMatcher;
+import com.github.joonasvali.bookreaderai.textutil.util.OffsetPenalty;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,8 +71,6 @@ public class TextJoiner {
           Set<String> candidateCommonSentence = new HashSet<>();
           candidateCommonSentence.add(newSentence);
 
-          int discardedWordsFirst = countDiscardedWords(firstSentence, result.prefix + result.commonPart);
-          int discardedWordsSecond = countDiscardedWords(secondSentence, result.commonPart + result.suffix);
 
           if (removePunctuationAndWhiteSpace(result.prefix).isEmpty() && removePunctuationAndWhiteSpace(result.suffix).isEmpty()) {
             candidateCommonSentence.add(firstSentence);
@@ -79,8 +78,11 @@ public class TextJoiner {
           }
 
           for (String sentence : candidateCommonSentence) {
+            int discardedWordsFirst = countDiscardedWords(firstSentence, sentence);
+            int discardedWordsSecond = countDiscardedWords(secondSentence, sentence);
+
             String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
-            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, discardedWordsFirst + discardedWordsSecond, firstSentence, secondSentence);
+            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence);
             potentialResultList.add(potentialResult);
           }
         }
@@ -131,7 +133,7 @@ public class TextJoiner {
     String[] words = cleanedSentence.split("\\s+");
     String[] matchingWords = cleanedMatch.split("\\s+");
 
-    return words.length - matchingWords.length;
+    return Math.max(0, words.length - matchingWords.length);
   }
 
 
@@ -165,6 +167,7 @@ public class TextJoiner {
     private int discardedWords;
     private String firstSentence;
     private String secondSentence;
+    private OffsetPenalty offsetPenaltyHelper;
 
     public PotentialResult(String[] sentences, String commonSentence, float evaluatedScore, int firstTextSentenceOffset, int secondTextSentenceOffset, int discardedWords, String firstSentence, String secondSentence) {
       this.sentences = sentences;
@@ -176,10 +179,13 @@ public class TextJoiner {
       this.discardedWords = discardedWords;
       this.firstSentence = firstSentence;
       this.secondSentence = secondSentence;
+      // TODO offset penalty should be smaller if "previous" sentences are very small.
+      this.offsetPenaltyHelper = new OffsetPenalty(0.65f);
     }
 
     public float getCalculatedScore() {
-      float penalty1 = evaluatedScore * (0.3f * (firstTextSentenceOffset + secondTextSentenceOffset));
+      float offsetFactor = offsetPenaltyHelper.calculateOffsetPenalty(firstTextSentenceOffset, secondTextSentenceOffset);
+      float penalty1 = evaluatedScore * offsetFactor;
       float penalty2 = evaluatedScore * discardedWords / countWords(commonSentence);
       float calcScore = Math.max(0.01f, evaluatedScore - penalty1 - penalty2);
 

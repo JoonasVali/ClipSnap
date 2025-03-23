@@ -177,7 +177,6 @@ public class SentencePotentialMatcherTest {
     assertEquals("", result2.suffix);
   }
 
-
   @Test
   public void testPunctuation() {
     String s1 = "Gods are not to be mocked!";
@@ -195,5 +194,32 @@ public class SentencePotentialMatcherTest {
     assertEquals("", result2.prefix);
     assertEquals("Gods are, not to: be mocked.", result2.commonPart);
     assertEquals("", result2.suffix);
+  }
+
+  @Test
+  public void testVeryShortInputs() {
+    String s1 = "The birds are singing.\n";
+    String s2 = ".a,";
+    SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
+    SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
+
+    assertTrue(result1.score < 0.1, "Got too high score: " + result1.score);
+    assertTrue(result2.score < 0.1, "Got too high score: " + result2.score);
+  }
+
+  @Test
+  public void testVeryShortInputs2() {
+    String s1 = "Silence, the birds are singing.\n";
+    String s2 = "s";
+    SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
+    SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
+
+    assertEquals("s", result1.commonPart);
+    assertEquals("s", result2.commonPart);
+
+    assertTrue(result1.score < 0.1, "Got too high score: " + result1.score);
+    assertTrue(result2.score < 0.1, "Got too high score: " + result2.score);
+
+
   }
 }
