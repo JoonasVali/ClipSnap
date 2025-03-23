@@ -60,7 +60,7 @@ public class TextJoinerTest {
     TextJoiner textJoiner = new TextJoiner();
     String text1 = "A journey of a thous and miles, begins with";
     String text2 = "thousand miles. Begins with a single step.";
-    String expected = "A journey of a thous and miles, begins with a single step.";
+    String expected = "A journey of a thous and miles. Begins with a single step.";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -70,7 +70,7 @@ public class TextJoinerTest {
     TextJoiner textJoiner = new TextJoiner();
     String text1 = "A journey of a thous and miles begins with";
     String text2 = "thousand miles. begins with a single step,";
-    String expected = "A journey of a thous and miles begins with a single step,";
+    String expected = "A journey of a thous and miles. begins with a single step,";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }

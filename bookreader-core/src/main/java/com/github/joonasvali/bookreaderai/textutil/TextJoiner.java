@@ -82,7 +82,7 @@ public class TextJoiner {
 
             String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
             PotentialResult potentialResult = new PotentialResult(
-                candidate, sentences1.length, sentence, result.score, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence,
+                candidate, sentences1.length, sentences2.length, sentence, result.score, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence,
                 sacrificedSentencesFromFirst, sacrificedSentencedFromSecond, firstSentenceIndex
             );
             potentialResultList.add(potentialResult);
@@ -183,13 +183,15 @@ public class TextJoiner {
     private int commonSentenceIndex;
     private List<SecondaryMatch> secondaryMatchCandidates;
     private int firstSentencesCount;
+    private int secondSentencesCount;
 
-    public PotentialResult(String[] sentences, int firstSentencesCount, String commonSentence, float evaluatedScore, int discardedWords, String firstSentence, String secondSentence, String[] firstSacrificedSentences, String[] secondSacrificedSentences, int commonSentenceIndex) {
+    public PotentialResult(String[] sentences, int firstSentencesCount, int secondSentencesCount, String commonSentence, float evaluatedScore, int discardedWords, String firstSentence, String secondSentence, String[] firstSacrificedSentences, String[] secondSacrificedSentences, int commonSentenceIndex) {
       this.sentences = sentences;
       this.commonSentence = commonSentence;
       this.evaluatedScore = evaluatedScore;
       this.commonSentenceIndex = commonSentenceIndex;
       this.firstSentencesCount = firstSentencesCount;
+      this.secondSentencesCount = secondSentencesCount;
       this.discardedWords = discardedWords;
       this.firstSentence = firstSentence;
       this.secondSentence = secondSentence;
@@ -198,7 +200,7 @@ public class TextJoiner {
       this.firstTextSentenceOffset = this.firstSacrificedSentences.length;
       this.secondTextSentenceOffset = this.secondSacrificedSentences.length;
       // TODO offset penalty should be smaller if "previous" sentences are very small.
-      this.offsetPenaltyHelper = new OffsetPenalty(0.65f);
+      this.offsetPenaltyHelper = new OffsetPenalty();
 
       secondaryMatchCandidates = new ArrayList<>();
       for (int i = 0; i < secondSacrificedSentences.length; i++) {
@@ -225,7 +227,7 @@ public class TextJoiner {
 
       float maxOffsetPenaltyReduction = (float) commonSentenceIndex / Math.max(1, firstSentencesCount);
 
-      float offsetFactor = offsetPenaltyHelper.calculateOffsetPenalty(firstTextSentenceOffset, secondTextSentenceOffset);
+      float offsetFactor = offsetPenaltyHelper.calculateOffsetPenalty(firstTextSentenceOffset, secondTextSentenceOffset, (float) firstTextSentenceOffset / firstSentencesCount, (float) secondTextSentenceOffset / secondSentencesCount);
       float penalty1 = evaluatedScore * offsetFactor * (1 - averageSecondaryMatchScore * maxOffsetPenaltyReduction);
       float penalty2 = evaluatedScore * discardedWords / countWords(commonSentence);
       float calcScore = Math.max(0.01f, evaluatedScore - penalty1 - penalty2);
