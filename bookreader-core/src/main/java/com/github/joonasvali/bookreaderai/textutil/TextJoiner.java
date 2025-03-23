@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Set;
 
 public class TextJoiner {
-  // Use the fuzzy matcher for sentence comparison.
   private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
 
   public String join(String text1, String text2) {

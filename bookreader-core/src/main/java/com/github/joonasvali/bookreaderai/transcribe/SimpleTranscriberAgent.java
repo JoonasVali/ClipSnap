@@ -43,9 +43,9 @@ public class SimpleTranscriberAgent {
   }
 
   public CompletableFuture<ProcessingResult<String>> transcribe() {
+    ImageAnalysis imageAnalysis = createImageAnalysis();
     return CompletableFuture.supplyAsync(() -> {
       try {
-        ImageAnalysis imageAnalysis = createImageAnalysis();
         ProcessingResult<String[]> results = processImage(imageAnalysis);
 
         TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
