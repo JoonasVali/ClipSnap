@@ -33,7 +33,7 @@ public class TextJoiner {
     String[] result = potentialResults != null ? potentialResults[0].sentences : null;
 
     if (result == null) {
-      result = new String[] { text1 + " " + text2 };
+      result = new String[] { text1, text2 };
     }
 
     return sentencesToString(result);
@@ -106,6 +106,11 @@ public class TextJoiner {
     double maxScore = potentialResultList
         .stream()
         .mapToDouble(PotentialResult::getCalculatedScore).max().orElse(0);
+
+    if (maxScore < 0.11) {
+      // With so low score we have no confidence in the result. Let's just append.
+      return null;
+    }
 
     // Get the ones with max score:
     PotentialResult[] maxScored = potentialResultList
@@ -227,15 +232,39 @@ public class TextJoiner {
 
       float maxOffsetPenaltyReduction = (float) commonSentenceIndex / Math.max(1, firstSentencesCount);
 
+
       float offsetFactor = offsetPenaltyHelper.calculateOffsetPenalty(firstTextSentenceOffset, secondTextSentenceOffset, (float) firstTextSentenceOffset / firstSentencesCount, (float) secondTextSentenceOffset / secondSentencesCount);
+      float bonusFromTwoIncompleteSentencesFormingOne = getFormulateFullSentenceBonus(commonSentence, firstSentence, secondSentence);
       float penalty1 = evaluatedScore * offsetFactor * (1 - averageSecondaryMatchScore * maxOffsetPenaltyReduction);
       float penalty2 = evaluatedScore * discardedWords / countWords(commonSentence);
-      float calcScore = Math.max(0.01f, evaluatedScore - penalty1 - penalty2);
+      float penalty3 = evaluatedScore * calculatePenaltyFromMismatchedWordsInSecondaryMatches(secondaryMatchCandidates);
+      float calcScore = Math.min(1.0f, Math.max(0.01f, evaluatedScore - penalty1 - penalty2 - penalty3 + bonusFromTwoIncompleteSentencesFormingOne));
 
       if (firstTextSentenceOffset == 0 && secondTextSentenceOffset == 0) {
         calcScore = Math.max(calcScore, 0.1f);
       }
       return calcScore;
+    }
+
+    private float getFormulateFullSentenceBonus(String commonSentence, String firstSentence, String secondSentence) {
+      return hasPunctuation(commonSentence) && !hasPunctuation(firstSentence) && hasPunctuation(secondSentence) ? 0.25f : 0;
+    }
+
+    private boolean hasPunctuation(String sentence) {
+      // Replace three or more consecutive dots with space. This is to avoid matching ellipsis as punctuation.
+      sentence = sentence.replaceAll("\\.{3,}", " ");
+      return sentence.contains(".") || sentence.contains("!") || sentence.contains("?") || sentence.contains(";");
+    }
+
+    private float calculatePenaltyFromMismatchedWordsInSecondaryMatches(List<SecondaryMatch> secondaryMatchCandidates) {
+      float totalPenalty = 0;
+      int totalWordsInSentences = Arrays.stream(sentences).mapToInt(TextJoiner.this::countWords).sum();
+      for (SecondaryMatch match : secondaryMatchCandidates) {
+        int words = countWords(match.sacrificedSentence);
+        float weight = (float) words / totalWordsInSentences;
+        totalPenalty += (1 - match.score) * weight;
+      }
+      return Math.min(1.0f, totalPenalty);
     }
   }
 

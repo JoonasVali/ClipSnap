@@ -60,7 +60,7 @@ public class TextJoinerTest {
     TextJoiner textJoiner = new TextJoiner();
     String text1 = "A journey of a thous and miles, begins with";
     String text2 = "thousand miles. Begins with a single step.";
-    String expected = "A journey of a thous and miles. Begins with a single step.";
+    String expected = "A journey of a thous and miles, begins with a single step.";
     String result = textJoiner.join(text1, text2);
     assertEquals(expected, result);
   }
@@ -266,6 +266,36 @@ public class TextJoinerTest {
         Whistle while you work.
         Danger is my middle name.
         FISH HORSE MOUSE
+        """;
+    assertEquals(expected, joiner.join(text1, text2));
+  }
+
+  @Test
+  public void testWithRealisticExample() {
+    TextJoiner joiner = new TextJoiner();
+    String text1 = """
+        31. juuli 1941. a.
+        
+        Hommikul asusime vaatluspunktidega uutele positsioonidele, sest jalaväge ees peaaegu ei ole. Kui seda poleks teinud, oleksime võinud korduvalt järjekordselt oma vaatluspunktide koosseisu kaotada. Sideülem leitnant Lopik jäeti ravile diviisi med. dan pataljoni. Pidi enamasti osalt paari nädala jooksul välja. Nüüd tuleb minul tema eest korraldada ka telefonisidet. Eestlasi sidemehi pole enam järgi jäänud. Liinid tuleb maha, ja edasiliikumisel üles kerida vene poistega, kelle peale ei või kunagi kindel olla, et jätkud oleks korralikult tehtud ja pidev side kindlustatud.
+        
+        Õhtupool avastasid saksa luurelennukid meie patareide asukoha ja kutsusid sinna tugeva suurtükid ja miinipildujate tule. siis anti korraldus pimeda tulekul asuda uutele tulepositsioonidele.
+        """;
+
+    String text2 = """
+        1. augustil 1941. a.
+        
+        Kui hommikuks uus telefoniside sai maha veetud, tuli ümber korraldada ka raadioside. Viisime teise raadiojaama ühe patarei komandopunkti 227. jalaväepolgu juurde, et sealt jalaväe komandöri nõudmisel kutsuda välja meie suurtükiväe tuld. Esimest korda sai nähtud, et ka jalaväelased on huvitatud suurtükitulde väljakutsumisest. Väljaõpetamata jalaväe komandörid tahavad peale tungida selliselt nagu milotame kinofilmidest, kus tütipidi rünnati vaenlasele peale, et teha suuri vägitegusid.
+        """;
+
+    String expected = """
+        31. juuli 1941. a.
+        
+        Hommikul asusime vaatluspunktidega uutele positsioonidele, sest jalaväge ees peaaegu ei ole. Kui seda poleks teinud, oleksime võinud korduvalt järjekordselt oma vaatluspunktide koosseisu kaotada. Sideülem leitnant Lopik jäeti ravile diviisi med. dan pataljoni. Pidi enamasti osalt paari nädala jooksul välja. Nüüd tuleb minul tema eest korraldada ka telefonisidet. Eestlasi sidemehi pole enam järgi jäänud. Liinid tuleb maha, ja edasiliikumisel üles kerida vene poistega, kelle peale ei või kunagi kindel olla, et jätkud oleks korralikult tehtud ja pidev side kindlustatud.
+        
+        Õhtupool avastasid saksa luurelennukid meie patareide asukoha ja kutsusid sinna tugeva suurtükid ja miinipildujate tule. siis anti korraldus pimeda tulekul asuda uutele tulepositsioonidele.
+        1. augustil 1941. a.
+        
+        Kui hommikuks uus telefoniside sai maha veetud, tuli ümber korraldada ka raadioside. Viisime teise raadiojaama ühe patarei komandopunkti 227. jalaväepolgu juurde, et sealt jalaväe komandöri nõudmisel kutsuda välja meie suurtükiväe tuld. Esimest korda sai nähtud, et ka jalaväelased on huvitatud suurtükitulde väljakutsumisest. Väljaõpetamata jalaväe komandörid tahavad peale tungida selliselt nagu milotame kinofilmidest, kus tütipidi rünnati vaenlasele peale, et teha suuri vägitegusid.
         """;
     assertEquals(expected, joiner.join(text1, text2));
   }
