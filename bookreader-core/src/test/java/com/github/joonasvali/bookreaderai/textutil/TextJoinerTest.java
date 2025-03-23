@@ -258,7 +258,6 @@ public class TextJoinerTest {
         FISH HORSE MOUSE
         """;
 
-    // 1941. is not expected to be joined. DOG CAT BIR… and DOG CAT BIRD are expected to be joined.
     String expected = """
         Ladybug, ladybug, fly away home.
         Whistle while you work.

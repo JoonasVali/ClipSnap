@@ -77,12 +77,18 @@ public class TextJoiner {
             candidateCommonSentence.add(secondSentence);
           }
 
+          String[] sentences1Slice = sliceSentences(sentences1, firstSentenceIndex, true);
+          String[] sentences2Slice = sliceSentences(sentences2, secondSentenceIndex, false);
+
           for (String sentence : candidateCommonSentence) {
             int discardedWordsFirst = countDiscardedWords(firstSentence, sentence);
             int discardedWordsSecond = countDiscardedWords(secondSentence, sentence);
 
             String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
-            PotentialResult potentialResult = new PotentialResult(candidate, sentence, result.score, firstOffset, secondOffset, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence);
+            PotentialResult potentialResult = new PotentialResult(
+                candidate, sentence, result.score, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence,
+                sentences1Slice, sentences2Slice
+            );
             potentialResultList.add(potentialResult);
           }
         }
@@ -112,6 +118,14 @@ public class TextJoiner {
         .toArray(PotentialResult[]::new);
 
     return maxScored;
+  }
+
+  public String[] sliceSentences(String[] sentences, int indexExcluding, boolean forward) {
+    if (forward) {
+      return Arrays.copyOfRange(sentences, indexExcluding + 1, sentences.length);
+    } else {
+      return Arrays.copyOfRange(sentences, 0, indexExcluding);
+    }
   }
 
   private int countWords(String commonSentence) {
@@ -168,17 +182,21 @@ public class TextJoiner {
     private String firstSentence;
     private String secondSentence;
     private OffsetPenalty offsetPenaltyHelper;
+    private String[] firstSacrificedSentences;
+    private String[] secondSacrificedSentences;
 
-    public PotentialResult(String[] sentences, String commonSentence, float evaluatedScore, int firstTextSentenceOffset, int secondTextSentenceOffset, int discardedWords, String firstSentence, String secondSentence) {
+    public PotentialResult(String[] sentences, String commonSentence, float evaluatedScore, int discardedWords, String firstSentence, String secondSentence, String[] firstSacrificedSentences, String[] secondSacrificedSentences) {
       this.sentences = sentences;
       this.commonSentence = commonSentence;
       this.evaluatedScore = evaluatedScore;
 
-      this.firstTextSentenceOffset = firstTextSentenceOffset;
-      this.secondTextSentenceOffset = secondTextSentenceOffset;
       this.discardedWords = discardedWords;
       this.firstSentence = firstSentence;
       this.secondSentence = secondSentence;
+      this.firstSacrificedSentences = firstSacrificedSentences;
+      this.secondSacrificedSentences = secondSacrificedSentences;
+      this.firstTextSentenceOffset = this.firstSacrificedSentences.length;
+      this.secondTextSentenceOffset = this.secondSacrificedSentences.length;
       // TODO offset penalty should be smaller if "previous" sentences are very small.
       this.offsetPenaltyHelper = new OffsetPenalty(0.65f);
     }
