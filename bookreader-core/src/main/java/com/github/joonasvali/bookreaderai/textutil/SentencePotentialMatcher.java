@@ -34,14 +34,18 @@ public class SentencePotentialMatcher {
       return new MatchResult(1.0f, s1, "", "");
     }
 
+    // Determine whether we should allow fuzzy containment.
+    // Disable fuzzy containment if the shorter string is very short (e.g., less than 3 characters).
+    boolean canFuzzyContain = Math.min(ns1.normalized.length(), ns2.normalized.length()) >= 3;
+
     // First, try fuzzy containment: does one normalized string (almost) appear inside the other?
     FuzzyContainmentResult fcr = null;
     boolean s1IsContained = false;
-    if (ns1.normalized.length() <= ns2.normalized.length()) {
+    if (canFuzzyContain && ns1.normalized.length() <= ns2.normalized.length()) {
       fcr = fuzzyContainment(ns1.normalized, ns2.normalized);
       s1IsContained = (fcr != null);
     }
-    if (fcr == null && ns2.normalized.length() < ns1.normalized.length()) {
+    if (fcr == null && canFuzzyContain && ns2.normalized.length() < ns1.normalized.length()) {
       fcr = fuzzyContainment(ns2.normalized, ns1.normalized);
       s1IsContained = false; // in this case, s2 is the contained one.
     }
@@ -74,7 +78,7 @@ public class SentencePotentialMatcher {
     } else {
       // Fallback: use exact longest common substring (LCS) on the normalized strings.
       LCSResult lcsRes = getLongestCommonSubstring(ns1.normalized, ns2.normalized);
-      score = (float)Math.max(0.0, (double) lcsRes.length / Math.max(ns1.normalized.length(), ns2.normalized.length()));
+      score = (float) Math.max(0.0, (double) lcsRes.length / Math.max(ns1.normalized.length(), ns2.normalized.length()));
       if (lcsRes.length == 0) {
         return new MatchResult(score, "", "", "");
       }

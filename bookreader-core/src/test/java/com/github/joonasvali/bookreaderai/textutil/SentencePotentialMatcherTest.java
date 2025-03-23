@@ -214,8 +214,12 @@ public class SentencePotentialMatcherTest {
     SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
     SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
 
-    assertEquals("s", result1.commonPart);
+    assertEquals("S", result1.commonPart);
     assertEquals("s", result2.commonPart);
+    assertEquals("", result1.prefix);
+    assertEquals("", result1.suffix);
+    assertEquals("", result2.prefix);
+    assertEquals("ilence, the birds are singing.\n", result2.suffix);
 
     assertTrue(result1.score < 0.1, "Got too high score: " + result1.score);
     assertTrue(result2.score < 0.1, "Got too high score: " + result2.score);
