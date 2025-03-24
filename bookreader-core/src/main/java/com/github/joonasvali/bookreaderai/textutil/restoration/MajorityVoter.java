@@ -33,126 +33,176 @@ public class MajorityVoter {
   }
 
   /**
-   * A simple structure holding a token’s base (the word without any trailing newline)
-   * and a flag indicating if the token originally ended with a newline.
+   * A simple structure holding a token’s original text and a flag indicating if the token originally ended with a newline.
    */
   private static class TokenInfo {
-    String base;      // the token without a trailing newline
+    String token;      // the original token without the trailing newline
     boolean hasNewline;  // whether the token ended with a newline
 
     TokenInfo(String token) {
       if (token.endsWith("\n")) {
-        this.base = token.substring(0, token.length() - 1);
+        this.token = token.substring(0, token.length() - 1);
         this.hasNewline = true;
       } else {
-        this.base = token;
+        this.token = token;
         this.hasNewline = false;
       }
     }
   }
 
   /**
+   * Normalizes a token for voting purposes.
+   * Converts to lower-case and, if it ends with a period or comma, strips that trailing character.
+   */
+  private String normalize(String token) {
+    String norm = token.toLowerCase();
+    if (norm.endsWith(".") || norm.endsWith(",")) {
+      norm = norm.substring(0, norm.length() - 1);
+    }
+    return norm;
+  }
+
+  /**
    * Aligns the provided texts using a majority vote strategy.
    * <p>
-   * This implementation treats line breaks as part of the token.
-   * It splits each text using a single space (" ") so that tokens containing "\n" keep the newline
-   * attached. When comparing tokens, it uses the base word (token without trailing newline)
-   * in a case-insensitive manner. After computing the majority base word at each position,
-   * it chooses one token variant (preserving its original case) from among those matching the majority.
-   * If any of those tokens had a trailing newline, the resulting token will have one appended.
-   * <p>
-   * Reassembly inserts a space between tokens unless the previous token ended with a newline;
-   * in that case, if the token is not the last token, an extra space is appended immediately after the newline.
+   * The algorithm splits texts into tokens (separated by a single space), preserving newlines.
+   * It uses the first non-null, non-empty text as the reference.
+   * For each token position (up to the reference token count):
+   * - For non-final tokens: if the reference token ends with punctuation (comma or period), it is trusted and used directly.
+   * - For the final token: a majority vote is performed and then, if at least one text provided a token without punctuation,
+   *   a trailing period (or comma) is stripped from the chosen candidate.
+   * Token voting is done by normalizing tokens (to lower-case and stripping trailing punctuation)
+   * and counting frequencies. In the event the majority candidate appears strictly more often than the reference token,
+   * that candidate is chosen; otherwise, the reference token is used.
+   * After a token is chosen, if the reference token originally ended with a newline,
+   * a newline is appended.
+   * Reassembly inserts spaces between tokens unless the preceding token ended with a newline.
    *
    * @param texts an array of texts to align
-   * @return an AlignmentResult containing the aligned text and meta information about the operation
+   * @return a VoteResult containing the aligned text and meta information about the operation
    */
   public VoteResult vote(String[] texts) {
     if (texts == null || texts.length == 0) {
       return new VoteResult("", false);
     }
 
-    // Split each text into tokens by a single space.
-    // This preserves newline characters as part of tokens.
-    int maxTokens = 0;
-    TokenInfo[][] tokensPerText = new TokenInfo[texts.length][];
+    // Use the first non-null, non-empty text as the reference.
+    String refText = null;
+    int refIndex = -1;
     for (int i = 0; i < texts.length; i++) {
-      if (texts[i] != null) {
+      if (texts[i] != null && !texts[i].isEmpty()) {
+        refText = texts[i];
+        refIndex = i;
+        break;
+      }
+    }
+    if (refText == null) {
+      return new VoteResult("", false);
+    }
+
+    // Split each text into tokens by a single space.
+    int nTexts = texts.length;
+    TokenInfo[][] tokensPerText = new TokenInfo[nTexts][];
+    for (int i = 0; i < nTexts; i++) {
+      if (texts[i] != null && !texts[i].isEmpty()) {
         String[] rawTokens = texts[i].split(" ");
         tokensPerText[i] = new TokenInfo[rawTokens.length];
         for (int j = 0; j < rawTokens.length; j++) {
           tokensPerText[i][j] = new TokenInfo(rawTokens[j]);
         }
-        maxTokens = Math.max(maxTokens, rawTokens.length);
       } else {
         tokensPerText[i] = new TokenInfo[0];
       }
     }
 
-    // For each token position, do a majority vote on the base word (ignoring newline flag).
-    // Also track if any token for that base word contained a newline.
-    String[] alignedTokens = new String[maxTokens];
-    for (int tokenIndex = 0; tokenIndex < maxTokens; tokenIndex++) {
-      Map<String, Integer> frequency = new HashMap<>();
-      Map<String, Boolean> newlineFlag = new HashMap<>();
+    // Use the reference token array length as our limit.
+    TokenInfo[] refTokens = tokensPerText[refIndex];
+    int refLength = refTokens.length;
+    String[] alignedTokens = new String[refLength];
 
-      // Count frequencies and record newline flags for each base word (using lower-case for counting).
-      for (int i = 0; i < texts.length; i++) {
-        if (tokenIndex < tokensPerText[i].length) {
-          TokenInfo tokenInfo = tokensPerText[i][tokenIndex];
-          String baseLower = tokenInfo.base.toLowerCase();
-          frequency.put(baseLower, frequency.getOrDefault(baseLower, 0) + 1);
-          // Mark newline flag true if any token has a newline.
-          if (tokenInfo.hasNewline) {
-            newlineFlag.put(baseLower, true);
-          } else {
-            newlineFlag.putIfAbsent(baseLower, false);
+    for (int pos = 0; pos < refLength; pos++) {
+      String refToken = refTokens[pos].token;
+      String refNorm = normalize(refToken);
+      String chosen;
+
+      // For non-final tokens, if the reference token ends with punctuation, trust it.
+      if (pos != refLength - 1 && (refToken.endsWith(",") || refToken.endsWith("."))) {
+        chosen = refToken;
+      } else {
+        // Build frequency and candidate maps from available tokens at this position.
+        Map<String, Integer> frequency = new HashMap<>();
+        Map<String, String> candidateMap = new HashMap<>();
+        for (int t = 0; t < nTexts; t++) {
+          if (pos < tokensPerText[t].length) {
+            String token = tokensPerText[t][pos].token;
+            String norm = normalize(token);
+            frequency.put(norm, frequency.getOrDefault(norm, 0) + 1);
+            // Choose candidate variant: prefer one without trailing punctuation.
+            if (!candidateMap.containsKey(norm)) {
+              candidateMap.put(norm, token);
+            } else {
+              String existing = candidateMap.get(norm);
+              if ((existing.endsWith(".") || existing.endsWith(",")) && !(token.endsWith(".") || token.endsWith(","))) {
+                candidateMap.put(norm, token);
+              }
+            }
           }
         }
-      }
 
-      // Determine the majority base word.
-      String majorityBaseLower = "";
-      int maxCount = 0;
-      for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
-        if (entry.getValue() > maxCount) {
-          majorityBaseLower = entry.getKey();
-          maxCount = entry.getValue();
-        }
-      }
-
-      // Choose a candidate token variant from the texts that has the majority base (preserving original case).
-      String candidate = "";
-      for (int i = 0; i < texts.length; i++) {
-        if (tokenIndex < tokensPerText[i].length) {
-          TokenInfo tokenInfo = tokensPerText[i][tokenIndex];
-          if (tokenInfo.base.toLowerCase().equals(majorityBaseLower)) {
-            candidate = tokenInfo.base;
-            break;
+        // Determine the majority normalized candidate.
+        String majorityNorm = refNorm;
+        int maxCount = frequency.getOrDefault(refNorm, 0);
+        for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
+          if (entry.getValue() > maxCount) {
+            majorityNorm = entry.getKey();
+            maxCount = entry.getValue();
           }
         }
+        int refCount = frequency.getOrDefault(refNorm, 0);
+        // If the majority candidate appears strictly more than the reference token, choose it.
+        if (maxCount > refCount && candidateMap.containsKey(majorityNorm)) {
+          chosen = candidateMap.get(majorityNorm);
+        } else {
+          chosen = refToken;
+        }
       }
 
-      // Append newline if any token with this base had one.
-      boolean majorityHasNewline = newlineFlag.getOrDefault(majorityBaseLower, false);
-      alignedTokens[tokenIndex] = majorityHasNewline ? candidate + "\n" : candidate;
+      // For the final token, if any text's token did not end with punctuation, then strip trailing punctuation from the chosen token.
+      if (pos == refLength - 1) {
+        boolean hasNonPunctuatedVariant = false;
+        for (int t = 0; t < nTexts; t++) {
+          if (pos < tokensPerText[t].length) {
+            String token = tokensPerText[t][pos].token;
+            if (!(token.endsWith(".") || token.endsWith(","))) {
+              hasNonPunctuatedVariant = true;
+              break;
+            }
+          }
+        }
+        if (hasNonPunctuatedVariant && (chosen.endsWith(".") || chosen.endsWith(","))) {
+          chosen = chosen.substring(0, chosen.length() - 1);
+        }
+      }
+
+      // Preserve the trailing newline if the reference token originally had one.
+      if (refTokens[pos].hasNewline && !chosen.endsWith("\n")) {
+        chosen = chosen + "\n";
+      }
+      alignedTokens[pos] = chosen;
     }
 
-    // Reassemble the aligned tokens into a single string.
-    StringBuilder alignedTextBuilder = new StringBuilder();
+    // Reassemble tokens with proper spacing.
+    StringBuilder sb = new StringBuilder();
     for (int i = 0; i < alignedTokens.length; i++) {
-      String token = alignedTokens[i];
       if (i > 0 && !alignedTokens[i - 1].endsWith("\n")) {
-        alignedTextBuilder.append(" ");
+        sb.append(" ");
       }
-      alignedTextBuilder.append(token);
-      if (token.endsWith("\n") && i < alignedTokens.length - 1) {
-        // If the token ends with a newline and it's not the final token,
-        // append an extra space to preserve a leading space on the next line.
-        alignedTextBuilder.append(" ");
+      sb.append(alignedTokens[i]);
+      if (alignedTokens[i].endsWith("\n") && i < alignedTokens.length - 1) {
+        sb.append(" ");
       }
     }
 
-    return new VoteResult(alignedTextBuilder.toString(), true);
+    return new VoteResult(sb.toString(), true);
   }
 }

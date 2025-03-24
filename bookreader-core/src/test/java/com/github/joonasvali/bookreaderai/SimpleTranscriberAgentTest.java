@@ -49,7 +49,7 @@ public class SimpleTranscriberAgentTest {
   }
 
   @Test
-  public void testWithExtraWordsReturnsFirst() {
+  public void testWithExtraWords() {
     String value = invokeTest("bears, beets, Battlestar Galactica.", "bears, bears, Battlestar Galactica", "..still. bears, beets, Battle star Galactica");
     Assertions.assertEquals("bears, beets, Battlestar Galactica", value);
   }
@@ -57,7 +57,7 @@ public class SimpleTranscriberAgentTest {
   @Test
   public void testMessyText() {
     String value = invokeTest("bears, beets, Five Battlestar Galactica.", "bears, bears, BattlestarGalactica", "..still. bears, four beets, Battle star Galactica");
-    Assertions.assertEquals("bears, beets, beets, Battle star Galactica", value);
+    Assertions.assertEquals("bears, beets, Five Battlestar Galactica", value);
   }
 
   @Test
