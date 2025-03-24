@@ -1,14 +1,17 @@
 package com.github.joonasvali.bookreaderai.textutil.restoration;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
+ * TODO this whole class is wtf
+ *
  * This class is used to match sentences from multiple texts.
  * This is fully AI generated.
  * The code was implemented based on tests in TextSentenceMatcherTest class.
  */
-public class TextSentenceMatcher {
+public class TextSentenceSplitter {
 
   /**
    * Splits the input text into sentences.
@@ -156,7 +159,8 @@ public class TextSentenceMatcher {
     return result;
   }
 
-  public Sentence[] getSentences(String... texts) {
+  public String[] getSentences(String text) {
+    String[] texts = new String[] { text };
     List<List<String>> allSentences = new ArrayList<>();
     int maxCount = 0;
     int minCount = Integer.MAX_VALUE;
@@ -200,6 +204,9 @@ public class TextSentenceMatcher {
       }
       result[i] = new Sentence(sentenceVersions);
     }
-    return result;
+    return Arrays.stream(result).map(s -> s.texts()[0]).toArray(String[]::new);
   }
+}
+
+record Sentence(String[] texts) {
 }

@@ -44,20 +44,20 @@ public class SimpleTranscriberAgentTest {
 
   @Test
   public void testWithMinorDifferences() {
-    String value = invokeTest("bears, beets, Battlestar Galatica", "bears, beets, Battlestar Galatica.", "bears, bears, Battlestar Galatica");
-    Assertions.assertEquals("bears, beets, Battlestar Galatica", value);
+    String value = invokeTest("bears, beets, Battlestar Galactica", "bears, beets, Battlestar Galactica.", "bears, bears, Battlestar Galactica");
+    Assertions.assertEquals("bears, beets, Battlestar Galactica", value);
   }
 
   @Test
   public void testWithExtraWordsReturnsFirst() {
-    String value = invokeTest("bears, beets, Battlestar Galatica.", "bears, bears, Battlestar Galatica", "..still. bears, beets, Battle star Galatica");
-    Assertions.assertEquals(" still.  beets, Battle star Galatica", value);
+    String value = invokeTest("bears, beets, Battlestar Galactica.", "bears, bears, Battlestar Galactica", "..still. bears, beets, Battle star Galactica");
+    Assertions.assertEquals("bears, beets, Battlestar Galactica", value);
   }
 
   @Test
   public void testMessyText() {
-    String value = invokeTest("bears, beets, Five Battlestar Galatica.", "bears, bears, BattlestarGalatica", "..still. bears, four beets, Battle star Galatica");
-    Assertions.assertEquals(" still.  four beets, Battle star Galatica", value);
+    String value = invokeTest("bears, beets, Five Battlestar Galactica.", "bears, bears, BattlestarGalactica", "..still. bears, four beets, Battle star Galactica");
+    Assertions.assertEquals("bears, beets, beets, Battle star Galactica", value);
   }
 
   @Test
@@ -83,7 +83,7 @@ public class SimpleTranscriberAgentTest {
     randomtext.
     3. augustil 1941. a.
     
-    Läksin tagasi jalaväepolgu staapi. Küsisin sealt ühelt radistilt laetud aku. Kuid ka see oli vist halvasti laetud, või kaua taga juba töötatud, sest side oli katkendlik. Siis läksin õhtul tagasi oma diviisjoni vaatluskpunkti, et tuua sealt laetud akud. Ka võtsin sealt kaasa mitu uut anoodpatareid. Sain siis kahe päeva järel jälle köögist sooja toitu.
+    Läksin tagasi jalaväepolgu staapi. Küsisin sealt ühelt radistilt laetud aku. Kuid ka see oli vist halvasti laetud, või kaua taga juba töötatud, sest side oli katkendlik. Siis läksin õhtul tagasi oma diviisjoni vaatluspunkti, et tuua sealt laetud akud. Ka võtsin sealt kaasa mitu uut anoodpatareid. Sain siis kahe päeva järel jälle köögist sooja toitu.
     
     Kell 20 algas äge sakslaste pealetung terve rinde ulatuses. Meist lõunapool saavutasid nad edu, lüües augu venelaste rindesse mitme kilomeetri ulatuses. Meie vaatluspunktil tuli koos jalaväe staapidega taanduda. Siis tuli terve öö liikuda mööda metsi ja põldu raadiojaam seljas. Alles hommikul sain kokku meie pataljoni sideauto- ja meeskonnaga, kes võttis sidet üles.
     """;

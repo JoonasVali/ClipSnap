@@ -1,8 +1,6 @@
 package com.github.joonasvali.bookreaderai.transcribe;
 
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
-import com.github.joonasvali.bookreaderai.textutil.StringSelector;
-import com.github.joonasvali.bookreaderai.textutil.restoration.TextAligner;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextRestorer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

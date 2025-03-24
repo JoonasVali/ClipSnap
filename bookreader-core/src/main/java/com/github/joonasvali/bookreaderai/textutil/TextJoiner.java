@@ -1,7 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
-import com.github.joonasvali.bookreaderai.textutil.restoration.Sentence;
-import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceMatcher;
+import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceSplitter;
 import com.github.joonasvali.bookreaderai.textutil.util.OffsetPenalty;
 
 import java.util.ArrayList;
@@ -15,18 +14,12 @@ public class TextJoiner {
 
   public String join(String text1, String text2) {
 
-    Sentence[] sentences1 = new TextSentenceMatcher().getSentences(text1);
-    Sentence[] sentences2 = new TextSentenceMatcher().getSentences(text2);
+    String[] sentences1 = new TextSentenceSplitter().getSentences(text1);
+    String[] sentences2 = new TextSentenceSplitter().getSentences(text2);
 
     PotentialResult[] potentialResults = join(
-        Arrays.stream(sentences1)
-            .map(Sentence::texts)
-            .flatMap(Arrays::stream)
-            .toArray(String[]::new),
-        Arrays.stream(sentences2)
-            .map(Sentence::texts)
-            .flatMap(Arrays::stream)
-            .toArray(String[]::new)
+        sentences1,
+        sentences2
     );
 
     String[] result = potentialResults != null ? potentialResults[0].sentences : null;

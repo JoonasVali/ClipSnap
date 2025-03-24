@@ -5,7 +5,6 @@ import com.github.joonasvali.bookreaderai.textutil.SentencePotentialMatcher;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,14 +45,9 @@ public class TextAligner {
     }
     List<AlignState> stateList = new ArrayList<>();
     Arrays.stream(textVersions).forEach(text -> {
-      Sentence[] sentences = new TextSentenceMatcher().getSentences(text);
+      String[] sentences = new TextSentenceSplitter().getSentences(text);
 
-      String[] sentenceArray = Arrays.stream(sentences)
-          .map(Sentence::texts)
-          .flatMap(Arrays::stream)
-          .toArray(String[]::new);
-
-      stateList.add(new AlignState(sentenceArray));
+      stateList.add(new AlignState(sentences));
     });
 
     States states = new States(stateList);
@@ -75,10 +69,15 @@ public class TextAligner {
       String[] stc = currentSentences.toArray(new String[0]);
       MajorityVoter.VoteResult voteResult = majorityVoter.vote(stc);
       if (voteResult.isSuccess()) {
-        finalText.append(voteResult.getResultingText()).append(" ");
+        finalText.append(voteResult.getResultingText());
+        if (!finalText.isEmpty() && finalText.charAt(finalText.length() - 1) != '\n') {
+          finalText.append(" ");
+        }
       }
     }
-    finalText.replace(finalText.length() - 1, finalText.length(), "");
+    if (!finalText.isEmpty() && finalText.charAt(finalText.length() - 1) == ' ') {
+      finalText.replace(finalText.length() - 1, finalText.length(), "");
+    }
 
 
     return new AlignmentResult(finalText.toString(), true);
