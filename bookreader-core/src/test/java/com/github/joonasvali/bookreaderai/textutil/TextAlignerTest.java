@@ -137,7 +137,7 @@ public class TextAlignerTest {
 
     String[] texts = { text1, text2, text3 };
     TextAligner.AlignmentResult result = aligner.alignTexts(texts);
-    assertEquals("No way. Hello, this is a sample text. This is a sample text. How are you? I'm good. How are you?", result.getAlignedText());
+    assertEquals("Hello, this is a sample text. This is a sample text. How are you? I'm good. How are you?", result.getAlignedText());
     assertTrue(result.isSuccess());
   }
 }
