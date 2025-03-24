@@ -68,13 +68,13 @@ public class SimpleTranscriberAgentTest {
         
         Läksin tagasi jalaväepolgu staapi. Küsisin sealt ühelt radistilt laetud aku. Kuid ka see oli vist halvasti laetud, või kaua taga juba töötatud, sest side oli katkendlik. Siis läksin õhtul tagasi oma divisoni vaatluspunkti, et tuua sealt laetud akud. Ka võtsin sealt kaasa mitu uut anoodpatareid. Sain siis kahe päeva järel jälle köögist sooja toitu.
         
-        Kell 20 algas äge sakslaste pealetung terve rinde ulatuses. Meist lõunapool saavutasid nad edu, lüües augu venelaste rindesse mitme kilomeetri ulatuses. Meie vaatluspunktidel tuli koos jalaväe staapidega taanduda. Siis tuli terve öö liikuda mööda metsi ja põldu raadiojaam seljas. Alles hommikul sain kokku meie pataljoni sideauto- ja meeskonnaga, kes võttis sidet üles.        
+        Kell 20 algas äge sakslaste pealetung terve rinde ulatuses. Meist lõunapool saavutasid nad edu, lüües augu venelaste rindesse mitme kilomeetri ulatuses. Meie vaatluspunktidel tuli koos jalaväe staapidega taanduda. Siis tuli terve öö liikuda mööda metsi ja põldu raadiojaam seljas. Alles hommikul sain kokku meie pataljoni sideauto- ja meeskonnaga, kes võttis sidet üles.
         """, value);
   }
 
   String text1 = """
     3. augustil 1941. a.
-    Läksin tagasi jalaväepolgu staapi. Küsisin sealt ühelt radistilt laetud aku. Kuid ka see oli vist halvasti laetud, või kaua taga juba töötatud, sest side oli katkendlik. Siis läksin õhtul tagasi oma divisoni vaatluspunk┬Łti, et tuua sealt laetud akud. Ka võtsin sealt kaasa mitu uut anoodpatareid. Sain siis kahe päeva järel jälle köögist sooja toitu.
+    Läksin tagasi jalaväepolgu staapi. Küsisin sealt ühelt radistilt laetud aku. Kuid ka see oli vist halvasti laetud, või kaua taga juba töötatud, sest side oli katkendlik. Siis läksin õhtul tagasi oma divisoni vaatluspunkti, et tuua sealt laetud akud. Ka võtsin sealt kaasa mitu uut anoodpatareid. Sain siis kahe päeva järel jälle köögist sooja toitu.
     
     Kell 20 algas äge sakslaste pealetung terve rinde ulatuses. Meist lõunapool saavutasid nad edu, lüües augu venelaste rindesse mitme kilomeetri ulatuses. Meie vaatluspunktidel tuli koos jalaväe staapidega taanduda. Siis tuli terve öö liikuda mööda metsi ja põldu raadiojaam seljas. Alles hommikul sain kokku meie pataljoni sideauto- ja meeskonnaga, kes võttis sidet üles.
     """;

@@ -71,6 +71,18 @@ public class MajorityVoterTest {
   }
 
   @Test
+  public void testInputWithBadSymbols() {
+    // Two texts agree on "fox", one has "fix" due to a typo.
+    String text1 = "lähme vaatluspunk┬Łti.";
+    String text2 = "lähme vaatluspunkti.";
+    String text3 = "lähme vaatluspunkti.";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("lähme vaatluspunkti.", result.getResultingText());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
   public void testTextsWithDifferentLengths() {
     // Some texts have missing words at certain positions.
     String text1 = "The quick brown fox";
