@@ -4,10 +4,13 @@ import com.github.joonasvali.bookreaderai.textutil.SentencePotentialMatcher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The TextAligner class is responsible for aligning multiple text inputs.
@@ -43,6 +46,11 @@ public class TextAligner {
     if (textVersions == null || textVersions.length == 0) {
       return new AlignmentResult("", false);
     }
+
+    if (textVersions.length == 1) {
+      return new AlignmentResult(textVersions[0], true);
+    }
+
     List<AlignState> stateList = new ArrayList<>();
     Arrays.stream(textVersions).forEach(text -> {
       String[] sentences = new TextSentenceSplitter().getSentences(text);
@@ -115,6 +123,76 @@ public class TextAligner {
       });
     });
 
+    // Count the results per each alignState instance.
+    Map<AlignState, Integer> stateCountMap = new HashMap<>();
+    results.forEach(result -> {
+      stateCountMap.put(result.alignState1, stateCountMap.getOrDefault(result.alignState1, 0) + 1);
+      stateCountMap.put(result.alignState2, stateCountMap.getOrDefault(result.alignState2, 0) + 1);
+    });
+
+    // Find the maximum index for each alignState instance.
+    Map<AlignState, Integer> stateMaxIndexMap = new HashMap<>();
+    results.forEach(result -> {
+      Integer previousIndex = stateMaxIndexMap.get(result.alignState1);
+      if (previousIndex == null || previousIndex < result.index1) {
+        stateMaxIndexMap.put(result.alignState1, result.index1);
+      }
+
+      previousIndex = stateMaxIndexMap.get(result.alignState2);
+      if (previousIndex == null || previousIndex < result.index2) {
+        stateMaxIndexMap.put(result.alignState2, result.index2);
+      }
+    });
+
+    // Find the minimum index for each alignState instance.
+    Map<AlignState, Integer> stateMinIndexMap = new HashMap<>();
+    results.forEach(result -> {
+      Integer previousIndex = stateMinIndexMap.get(result.alignState1);
+      if (previousIndex == null || previousIndex > result.index1) {
+        stateMinIndexMap.put(result.alignState1, result.index1);
+      }
+
+      previousIndex = stateMinIndexMap.get(result.alignState2);
+      if (previousIndex == null || previousIndex > result.index2) {
+        stateMinIndexMap.put(result.alignState2, result.index2);
+      }
+    });
+
+    // Find the max min difference for each alignState instance.
+    Map<AlignState, Integer> stateMaxMinDiffMap = new HashMap<>();
+    stateMaxIndexMap.forEach((alignState, maxIndex) -> {
+      Integer minIndex = stateMinIndexMap.get(alignState);
+      if (minIndex != null) {
+        stateMaxMinDiffMap.put(alignState, maxIndex - minIndex);
+      }
+    });
+
+    // Find the maximum max min difference which are satisfied by at least 2 alignState instances.
+    List<Integer> uniqueDiffs = stateMaxMinDiffMap.values().stream()
+        .filter(diff -> diff > 0)
+        .distinct()
+        .sorted(Comparator.reverseOrder())
+        .collect(Collectors.toList());
+
+    int supportedDiff = 0;
+    for (int diff : uniqueDiffs) {
+      long count = stateMaxMinDiffMap.values().stream().filter(d -> d >= diff).count();
+      if (count >= 2) {
+        supportedDiff = diff;
+        break;
+      }
+    }
+    // Means we are expecting at least {supportedDiff} words to be present in all alignState instances.
+
+    // Collect alignStates which are below the supportedDiff.
+    int finalSupportedDiff = supportedDiff;
+    List<AlignState> statesToDiscard = states.states.stream()
+        .filter(state -> stateMaxMinDiffMap.get(state) == null || stateMaxMinDiffMap.get(state) < finalSupportedDiff)
+        .toList();
+
+    // Remove alignStates which are below the supportedDiff.
+    statesToDiscard.forEach(states::remove);
+
     int maximumIndex = results.stream().mapToInt(result -> Math.max(result.index1, result.index2)).max().orElse(0);
     Map<AlignState, Integer> stateIndexMap = new HashMap<>();
     for (int i = 0; i < maximumIndex; i++) {
@@ -146,6 +224,10 @@ public class TextAligner {
 
     public States(List<AlignState> states) {
       this.states = states;
+    }
+
+    public void remove(AlignState state) {
+      states.remove(state);
     }
   }
 
