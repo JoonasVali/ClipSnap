@@ -23,14 +23,10 @@ public class SimpleTranscriberAgent {
   private final String languageDirection;
   private final BufferedImage bufferedImage;
   private final String story;
-  private boolean useFixerAgent;
   private final String language;
 
-  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
-    this(bufferedImage, language, story, false);
-  }
 
-  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, boolean useFixerAgent) {
+  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
     this.bufferedImage = bufferedImage;
     if (language != null) {
       this.languageDirection = "The content is in " + language + " mostly.";
@@ -38,7 +34,6 @@ public class SimpleTranscriberAgent {
       this.languageDirection = "";
     }
     this.story = story + " ";
-    this.useFixerAgent = useFixerAgent;
     this.language = language;
   }
 
@@ -51,20 +46,11 @@ public class SimpleTranscriberAgent {
         TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
         ProcessingResult<String> result = verifierAgent.verify(results.content());
 
-        if (useFixerAgent) {
-          result = fixTranscriptionResult(result);
-          return new ProcessingResult<>(result.content(),
-              result.promptTokens() + results.promptTokens(),
-              result.completionTokens() + results.completionTokens(),
-              result.totalTokens() + results.totalTokens()
-          );
-        } else {
-          return new ProcessingResult<>(result.content(),
-              result.promptTokens() + results.promptTokens(),
-              result.completionTokens() + results.completionTokens(),
-              result.totalTokens() + results.totalTokens()
-          );
-        }
+        return new ProcessingResult<>(result.content(),
+            result.promptTokens() + results.promptTokens(),
+            result.completionTokens() + results.completionTokens(),
+            result.totalTokens() + results.totalTokens()
+        );
       } catch (Exception e) {
         logger.error("Unable to complete transcription", e);
         throw new RuntimeException(e);
@@ -81,17 +67,5 @@ public class SimpleTranscriberAgent {
 
   private ProcessingResult<String[]> processImage(ImageAnalysis imageAnalysis) throws IOException {
     return imageAnalysis.process(bufferedImage, 3);
-  }
-
-  private ProcessingResult<String> fixTranscriptionResult(ProcessingResult<String> result) {
-    TranscribeFixerAgent fixerAgent = new TranscribeFixerAgent(language, story);
-    ProcessingResult<String> fixedResult = fixerAgent.fix(result.content());
-
-    return new ProcessingResult<>(
-        fixedResult.content(),
-        result.promptTokens() + fixedResult.promptTokens(),
-        result.completionTokens() + fixedResult.completionTokens(),
-        result.totalTokens() + fixedResult.totalTokens()
-    );
   }
 }
