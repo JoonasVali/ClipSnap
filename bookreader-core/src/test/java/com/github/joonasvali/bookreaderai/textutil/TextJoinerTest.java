@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAIExtension;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +28,18 @@ public class TextJoinerTest {
 
   @Test
   public void testTextJoinerWithSplitWordIgnoringCase() {
-    TextJoiner textJoiner = new TextJoiner();
+    TextJoiner textJoiner = new TextJoiner(new TextJoinerAIExtension() {
+      @Override
+      public String fixText(String text) {
+        assertEquals("The quick brown fox jumps jum PS over the lazy dog.", text);
+        return "The quick brown fox jumps over the lazy dog.";
+      }
+
+      @Override
+      public int chooseText(String[] texts) {
+        throw new IllegalArgumentException();
+      }
+    });
     String text1 = "The quick brown fox jumps";
     String text2 = "jum PS over the lazy dog.";
     String expected = "The quick brown fox jumps over the lazy dog.";
@@ -136,12 +148,25 @@ public class TextJoinerTest {
 
   @Test
   public void testJoinStoryWithTranscriptionErrorsAndCasingDifference() {
-    TextJoiner joiner = new TextJoiner();
+    TextJoiner textJoiner = new TextJoiner(new TextJoinerAIExtension() {
+      @Override
+      public String fixText(String text) {
+        return "";
+      }
+
+      @Override
+      public int chooseText(String[] texts) {
+        assertEquals(2, texts.length);
+        assertEquals("...named Luna teased him by darting up trees. he tried TO climb. They had fun and BECAME inseparable.", texts[0]);
+        assertEquals("...named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable.", texts[1]);
+        return 1;
+      }
+    });
     String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. THEY had fub";
     String text2 = "threes. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
     String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable. Max loved that day";
 
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, textJoiner.join(text1, text2));
   }
 
 

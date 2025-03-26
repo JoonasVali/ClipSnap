@@ -1,7 +1,8 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceSplitter;
-import com.github.joonasvali.bookreaderai.textutil.util.OffsetPenalty;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.PotentialResult;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAIExtension;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,15 @@ import java.util.Set;
 
 public class TextJoiner {
   private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
+  private final TextJoinerAIExtension extension;
+
+  public TextJoiner(TextJoinerAIExtension extension) {
+    this.extension = extension;
+  }
+
+  public TextJoiner() {
+    this.extension = null;
+  }
 
   public String join(String text1, String text2) {
 
@@ -22,13 +32,58 @@ public class TextJoiner {
         sentences2
     );
 
-    String[] result = potentialResults != null ? potentialResults[0].sentences : null;
+    if (extension == null) {
+      String[] result = potentialResults != null ? potentialResults[0].getSentences() : null;
 
-    if (result == null) {
-      result = new String[] { text1, text2 };
+      if (result == null) {
+        result = new String[] { text1, text2 };
+      }
+
+      return sentencesToString(result);
     }
 
-    return sentencesToString(result);
+    if (potentialResults == null) {
+      return extension.fixText(sentencesToString(new String[] { text1, text2 }));
+    }
+
+    if (potentialResults.length > 1) {
+      String[] texts = new String[potentialResults.length];
+      for (int i = 0; i < potentialResults.length; i++) {
+        texts[i] = sentencesToString(takeAdjacentSentences(potentialResults[i], potentialResults[i].getCommonSentenceIndex(), true));
+      }
+      int choice = extension.chooseText(texts);
+      return sentencesToString(potentialResults[choice].getSentences());
+    } else {
+      return sentencesToString(potentialResults[0].getSentences());
+    }
+  }
+
+  private String[] takeAdjacentSentences(PotentialResult potentialResult, int commonSentenceIndex, boolean cut) {
+    List<String> result = new ArrayList<>(3);
+    // Loop from one sentence before to one sentence after the common sentence.
+    for (int i = commonSentenceIndex - 1; i <= commonSentenceIndex + 1; i++) {
+      if (i >= 0 && i < potentialResult.getSentences().length) {
+        if (cut && i != commonSentenceIndex) {
+          result.add(cut(potentialResult.getSentence(i), i == commonSentenceIndex - 1));
+        } else {
+          result.add(potentialResult.getSentence(i));
+        }
+      }
+    }
+    return result.toArray(new String[0]);
+  }
+
+  private String cut(String input, boolean cutBefore) {
+    int maxWords = 8;
+    String[] words = input.split("\\s+");
+    if (words.length <= maxWords) {
+      return input;
+    }
+    if (cutBefore) {
+      return "..." + String.join(" ", Arrays.copyOfRange(words, words.length - maxWords, words.length));
+    } else {
+      return String.join(" ", Arrays.copyOfRange(words, 0, maxWords)) + "...";
+    }
   }
 
   private String sentencesToString(String[] sentences) {
@@ -86,10 +141,10 @@ public class TextJoiner {
     boolean hasOnlyTouchingSentenceWithNoMatch =
         potentialResultList.size() == 1 &&
         // 50%+ of words are discarded as a result of the join
-        potentialResultList.getFirst().discardedWords >= (countWords(potentialResultList.getFirst().commonSentence) + potentialResultList.getFirst().discardedWords) * 0.5f &&
-        potentialResultList.getFirst().firstTextSentenceOffset == 0 &&
-        potentialResultList.getFirst().secondTextSentenceOffset == 0 &&
-        potentialResultList.getFirst().evaluatedScore < 0.2f;
+        potentialResultList.getFirst().getDiscardedWords() >= (WordCount.countWords(potentialResultList.getFirst().getCommonSentence()) + potentialResultList.getFirst().getDiscardedWords()) * 0.5f &&
+        potentialResultList.getFirst().getFirstTextSentenceOffset() == 0 &&
+        potentialResultList.getFirst().getSecondTextSentenceOffset() == 0 &&
+        potentialResultList.getFirst().getEvaluatedScore() < 0.2f; // TODO is evaluated score better than calculated score here?
 
     if (potentialResultList.isEmpty() || hasOnlyTouchingSentenceWithNoMatch) {
       return null;
@@ -121,12 +176,6 @@ public class TextJoiner {
     }
   }
 
-  private int countWords(String commonSentence) {
-    if (commonSentence == null) {
-      return 0;
-    }
-    return commonSentence.replaceAll("[\\p{Punct}]", "").split("\\s+").length;
-  }
 
   private int countDiscardedWords(String sentence, String match) {
     if (sentence == null || match == null) {
@@ -163,115 +212,6 @@ public class TextJoiner {
     }
 
     return returnedSentences;
-  }
-
-  private class PotentialResult {
-    private String[] sentences;
-    private String commonSentence;
-    private float evaluatedScore;
-    private int firstTextSentenceOffset;
-    private int secondTextSentenceOffset;
-    private int discardedWords;
-    private String firstSentence;
-    private String secondSentence;
-    private OffsetPenalty offsetPenaltyHelper;
-    private String[] firstSacrificedSentences;
-    private String[] secondSacrificedSentences;
-    private int commonSentenceIndex;
-    private List<SecondaryMatch> secondaryMatchCandidates;
-    private int firstSentencesCount;
-    private int secondSentencesCount;
-
-    public PotentialResult(String[] sentences, int firstSentencesCount, int secondSentencesCount, String commonSentence, float evaluatedScore, int discardedWords, String firstSentence, String secondSentence, String[] firstSacrificedSentences, String[] secondSacrificedSentences, int commonSentenceIndex) {
-      this.sentences = sentences;
-      this.commonSentence = commonSentence;
-      this.evaluatedScore = evaluatedScore;
-      this.commonSentenceIndex = commonSentenceIndex;
-      this.firstSentencesCount = firstSentencesCount;
-      this.secondSentencesCount = secondSentencesCount;
-      this.discardedWords = discardedWords;
-      this.firstSentence = firstSentence;
-      this.secondSentence = secondSentence;
-      this.firstSacrificedSentences = firstSacrificedSentences;
-      this.secondSacrificedSentences = secondSacrificedSentences;
-      this.firstTextSentenceOffset = this.firstSacrificedSentences.length;
-      this.secondTextSentenceOffset = this.secondSacrificedSentences.length;
-      // TODO offset penalty should be smaller if "previous" sentences are very small.
-      this.offsetPenaltyHelper = new OffsetPenalty();
-
-      secondaryMatchCandidates = new ArrayList<>();
-      for (int i = 0; i < secondSacrificedSentences.length; i++) {
-        if (commonSentenceIndex - (i + 1) >= 0) {
-          SecondaryMatch match = new SecondaryMatch(secondSacrificedSentences[i], sentences[commonSentenceIndex - (i + 1)]);
-          secondaryMatchCandidates.add(match);
-        }
-      }
-
-      for (int i = 0; i < firstSacrificedSentences.length; i++) {
-        if (commonSentenceIndex + (i + 1) < sentences.length) {
-          SecondaryMatch match = new SecondaryMatch(firstSacrificedSentences[i], sentences[commonSentenceIndex + (i + 1)]);
-          secondaryMatchCandidates.add(match);
-        }
-      }
-    }
-
-    public float getCalculatedScore() {
-      // If more sentences match at this position, then we reduce the offset penalty.
-      float averageSecondaryMatchScore = secondaryMatchCandidates
-          .stream()
-          .map(secondaryMatch -> secondaryMatch.score)
-          .reduce(0f, Float::sum) / Math.max(secondaryMatchCandidates.size(), 1);
-
-      float maxOffsetPenaltyReduction = (float) commonSentenceIndex / Math.max(1, firstSentencesCount);
-
-
-      float offsetFactor = offsetPenaltyHelper.calculateOffsetPenalty(firstTextSentenceOffset, secondTextSentenceOffset, (float) firstTextSentenceOffset / firstSentencesCount, (float) secondTextSentenceOffset / secondSentencesCount);
-      float bonusFromTwoIncompleteSentencesFormingOne = getFormulateFullSentenceBonus(commonSentence, firstSentence, secondSentence);
-      float penalty1 = evaluatedScore * offsetFactor * (1 - averageSecondaryMatchScore * maxOffsetPenaltyReduction);
-      float penalty2 = evaluatedScore * discardedWords / countWords(commonSentence);
-      float penalty3 = evaluatedScore * calculatePenaltyFromMismatchedWordsInSecondaryMatches(secondaryMatchCandidates);
-      float calcScore = Math.min(1.0f, Math.max(0.01f, evaluatedScore - penalty1 - penalty2 - penalty3 + bonusFromTwoIncompleteSentencesFormingOne));
-
-      if (firstTextSentenceOffset == 0 && secondTextSentenceOffset == 0) {
-        calcScore = Math.max(calcScore, 0.1f);
-      }
-      return calcScore;
-    }
-
-    private float getFormulateFullSentenceBonus(String commonSentence, String firstSentence, String secondSentence) {
-      return hasPunctuation(commonSentence) && !hasPunctuation(firstSentence) && hasPunctuation(secondSentence) ? 0.25f : 0;
-    }
-
-    private boolean hasPunctuation(String sentence) {
-      // Replace three or more consecutive dots with space. This is to avoid matching ellipsis as punctuation.
-      sentence = sentence.replaceAll("\\.{3,}", " ");
-      return sentence.contains(".") || sentence.contains("!") || sentence.contains("?") || sentence.contains(";");
-    }
-
-    private float calculatePenaltyFromMismatchedWordsInSecondaryMatches(List<SecondaryMatch> secondaryMatchCandidates) {
-      float totalPenalty = 0;
-      int totalWordsInSentences = Arrays.stream(sentences).mapToInt(TextJoiner.this::countWords).sum();
-      for (SecondaryMatch match : secondaryMatchCandidates) {
-        int words = countWords(match.sacrificedSentence);
-        float weight = (float) words / totalWordsInSentences;
-        totalPenalty += (1 - match.score) * weight;
-      }
-      return Math.min(1.0f, totalPenalty);
-    }
-  }
-
-  private static class SecondaryMatch {
-    private final String sacrificedSentence;
-    private final String realSentence;
-    private final float score;
-
-
-    public SecondaryMatch(String sacrificedSentence, String realSentence) {
-      this.sacrificedSentence = sacrificedSentence;
-      this.realSentence = realSentence;
-      SentencePotentialMatcher.MatchResult result = new SentencePotentialMatcher().match(sacrificedSentence, realSentence);
-      this.score = result.score;
-    }
   }
 }
 
