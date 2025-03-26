@@ -1,6 +1,8 @@
 package com.github.joonasvali.bookreaderai.textutil.textjoiner;
 
+import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
+
 public interface TextJoinerAIExtension {
-  String fixText(String text);
-  int chooseText(String[] texts);
+  ProcessingResult<String> fixText(String text);
+  ProcessingResult<Integer> chooseText(String[] texts);
 }

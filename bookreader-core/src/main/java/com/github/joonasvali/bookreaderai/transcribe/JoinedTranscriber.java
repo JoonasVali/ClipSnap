@@ -3,6 +3,7 @@ package com.github.joonasvali.bookreaderai.transcribe;
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.TextJoiner;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +86,7 @@ public class JoinedTranscriber {
     }
     logger.debug("Joining {} texts", results.size());
 
-    TextJoiner joiner = new TextJoiner();
+    TextJoiner joiner = new TextJoiner(new TextJoinerAI(language, story));
     String joinedText = results.getFirst();
 
     logger.debug("(1/"  + results.size() + ")" + "First text: {}", joinedText);

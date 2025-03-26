@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
+import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceSplitter;
 import com.github.joonasvali.bookreaderai.textutil.textjoiner.PotentialResult;
 import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAIExtension;
@@ -43,7 +44,9 @@ public class TextJoiner {
     }
 
     if (potentialResults == null) {
-      return extension.fixText(sentencesToString(new String[] { text1, text2 }));
+      ProcessingResult<String> result = extension.fixText(sentencesToString(new String[] { text1, text2 }));
+      // TODO: tokens ?
+      return result.content();
     }
 
     if (potentialResults.length > 1) {
@@ -51,7 +54,9 @@ public class TextJoiner {
       for (int i = 0; i < potentialResults.length; i++) {
         texts[i] = sentencesToString(takeAdjacentSentences(potentialResults[i], potentialResults[i].getCommonSentenceIndex(), true));
       }
-      int choice = extension.chooseText(texts);
+      ProcessingResult<Integer> result = extension.chooseText(texts);
+      // TODO: tokens ?
+      int choice = result.content();
       return sentencesToString(potentialResults[choice].getSentences());
     } else {
       return sentencesToString(potentialResults[0].getSentences());

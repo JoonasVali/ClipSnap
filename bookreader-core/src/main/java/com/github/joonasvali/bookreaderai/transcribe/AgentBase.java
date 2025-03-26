@@ -11,12 +11,16 @@ import com.openai.models.CompletionUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
+
 public class AgentBase {
-  private final Logger logger;
+  private Logger logger;
 
   private final CompletionUsage ZERO_USAGE = CompletionUsage.builder().completionTokens(0).totalTokens(0).promptTokens(0).build();
   private final String systemPrompt;
   private final ChatModel chatModel;
+
 
   public AgentBase(String systemPrompt, String language, String story) {
     this(systemPrompt, ChatModel.CHATGPT_4O_LATEST, language, story);
@@ -34,6 +38,26 @@ public class AgentBase {
     this.systemPrompt = systemPrompt
         .replace("${LANGUAGE}", languageDirection)
         .replace("${STORY}", story);
+  }
+
+  public void setLogger(Logger logger) {
+    this.logger = logger;
+  }
+
+  public Logger getLogger() {
+    return logger;
+  }
+
+  public ProcessingResult<String> invokeWithRetry(String text, int maxRetries) {
+    return new Retry<ProcessingResult<String>>(maxRetries).runWithRetry(
+        () -> invoke(text)
+    );
+  }
+
+  public ProcessingResult<String> invokeWithRetry(String text, int maxRetries, Predicate<ProcessingResult<String>> predicate) {
+    return new Retry<ProcessingResult<String>>(maxRetries).runWithRetry(
+        () -> invoke(text), predicate
+    );
   }
 
   public ProcessingResult<String> invoke(String text) {
@@ -63,5 +87,41 @@ public class AgentBase {
         chatCompletion.usage().orElse(ZERO_USAGE).completionTokens(),
         chatCompletion.usage().orElse(ZERO_USAGE).totalTokens()
     );
+  }
+
+  public class Retry<T> {
+    private int maxRetries;
+
+    public Retry(int maxRetries) {
+      this.maxRetries = maxRetries;
+    }
+
+    public T runWithRetry(Callable<T> runnable) {
+      return runWithRetry(runnable, result -> true);
+    }
+
+    public T runWithRetry(Callable<T> runnable, Predicate<T> successPredicate) {
+      int retries = 0;
+      while (retries < maxRetries) {
+        if (retries > 0) {
+          try {
+            Thread.sleep(3000L);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+        try {
+          T result = runnable.call();
+          if (successPredicate.test(result)) {
+            return result;
+          }
+        } catch (Exception e) {
+          logger.warn("Failed to run with retry", e);
+        }
+        retries++;
+      }
+      logger.error("Failed to run with retry after {} retries", maxRetries);
+      throw new RuntimeException("Unable to complete the operation after " + maxRetries + " retries");
+    }
   }
 }

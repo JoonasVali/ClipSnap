@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
+import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAIExtension;
 import org.junit.jupiter.api.Test;
 
@@ -30,13 +31,13 @@ public class TextJoinerTest {
   public void testTextJoinerWithSplitWordIgnoringCase() {
     TextJoiner textJoiner = new TextJoiner(new TextJoinerAIExtension() {
       @Override
-      public String fixText(String text) {
+      public ProcessingResult<String> fixText(String text) {
         assertEquals("The quick brown fox jumps jum PS over the lazy dog.", text);
-        return "The quick brown fox jumps over the lazy dog.";
+        return new ProcessingResult<>("The quick brown fox jumps over the lazy dog.", 0, 0, 0);
       }
 
       @Override
-      public int chooseText(String[] texts) {
+      public ProcessingResult<Integer> chooseText(String[] texts) {
         throw new IllegalArgumentException();
       }
     });
@@ -150,16 +151,16 @@ public class TextJoinerTest {
   public void testJoinStoryWithTranscriptionErrorsAndCasingDifference() {
     TextJoiner textJoiner = new TextJoiner(new TextJoinerAIExtension() {
       @Override
-      public String fixText(String text) {
-        return "";
+      public ProcessingResult<String> fixText(String text) {
+        throw new IllegalArgumentException();
       }
 
       @Override
-      public int chooseText(String[] texts) {
+      public ProcessingResult<Integer> chooseText(String[] texts) {
         assertEquals(2, texts.length);
         assertEquals("...named Luna teased him by darting up trees. he tried TO climb. They had fun and BECAME inseparable.", texts[0]);
         assertEquals("...named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable.", texts[1]);
-        return 1;
+        return new ProcessingResult<>(1, 0, 0, 0);
       }
     });
     String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. THEY had fub";
