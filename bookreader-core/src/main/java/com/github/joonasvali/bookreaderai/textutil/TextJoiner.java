@@ -149,7 +149,7 @@ public class TextJoiner {
         potentialResultList.getFirst().getDiscardedWords() >= (WordCount.countWords(potentialResultList.getFirst().getCommonSentence()) + potentialResultList.getFirst().getDiscardedWords()) * 0.5f &&
         potentialResultList.getFirst().getFirstTextSentenceOffset() == 0 &&
         potentialResultList.getFirst().getSecondTextSentenceOffset() == 0 &&
-        potentialResultList.getFirst().getEvaluatedScore() < 0.2f; // TODO is evaluated score better than calculated score here?
+        potentialResultList.getFirst().getCalculatedScore() < 0.5f;
 
     if (potentialResultList.isEmpty() || hasOnlyTouchingSentenceWithNoMatch) {
       return null;
