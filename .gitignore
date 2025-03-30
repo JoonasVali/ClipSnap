@@ -13,5 +13,3 @@ clipsnap.properties
 
 *.iml
 *.idea
-# Temporarily excluded
-**/bone_wraiths.yaml

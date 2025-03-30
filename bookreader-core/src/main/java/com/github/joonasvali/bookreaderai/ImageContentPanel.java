@@ -250,6 +250,11 @@ public class ImageContentPanel extends JPanel {
         LineUtil lineUtil = new LineUtil();
         String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
 
+        logger.info("-- Tokens used --");
+        logger.info("Used completion tokens: " + result.completionTokens());
+        logger.info("Used prompt tokens: " + result.promptTokens());
+        logger.info("User total tokens: " + result.totalTokens());
+
         if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
           // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
           textArea.setText(text);
