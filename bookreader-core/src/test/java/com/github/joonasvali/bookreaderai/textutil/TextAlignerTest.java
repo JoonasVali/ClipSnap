@@ -102,46 +102,42 @@ public class TextAlignerTest {
     assertTrue(result.isSuccess());
   }
 
-//
-//  @Test
-//  public void testExtraDotsInMiddle() {
-//    String text1 = """
-//        xyz.
-//
-//        14. august 1941.a.
-//
-//        ...
-//        Mice and men. Bread and butter. Cats and dogs.
-//        """;
-//    String text2 = """
-//        xyz.
-//
-//        14. august 1941.a.
-//
-//        Mice and men.
-//        Bread and butter. Cats
-//        and dogs.
-//        """;
-//
-//    String text3 = """
-//        xyz.
-//
-//        14. august 1941. a.
-//
-//        Mice and men.
-//        Bread and butter. Cats and dogs
-//        """;
-//
-//
-//    String[] texts = {text1, text2, text3};
-//    TextAligner.AlignmentResult result = aligner.alignTexts(texts);
-//    Assertions.assertEquals("""
-//        xyz.
-//
-//        14. august 1941. a.
-//
-//        Mice and men. Bread and butter. Bread and butter. Cats and dogs.
-//        """, result.getAlignedText());
-//  }
+  @Test
+  public void testExtraDotsInMiddle() {
+    String text1 = """
+        xyz.
+
+        14. august 1941.a.
+
+        ...
+        Mice and men. Bread and butter. Cats and dogs.
+        """;
+    String text2 = """
+        xyz.
+
+        14. august 1941.a.
+
+        Mice and men.
+        Bread and butter. Cats
+        and dogs.
+        """;
+
+    String text3 = """
+        xyz.
+
+        14. august 1941. a.
+
+        Mice and men.
+        Bread and butter. Cats and dogs
+        """;
+
+
+    String[] texts = {text1, text2, text3};
+    TextAligner.AlignmentResult result = aligner.alignTexts(texts);
+
+    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "Mice and men.", "Bread and butter.", "Cats and dogs.\n" }, result.getAlignedTexts()[0]);
+    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "\nMice and men.\n", "Bread and butter.", "Cats\nand dogs.\n" }, result.getAlignedTexts()[1]);
+    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "\nMice and men.\n", "Bread and butter.", "Cats and dogs\n" }, result.getAlignedTexts()[2]);
+  }
 
 }
