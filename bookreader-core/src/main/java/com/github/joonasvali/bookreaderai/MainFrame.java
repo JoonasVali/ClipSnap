@@ -16,7 +16,7 @@ public class MainFrame extends JFrame {
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(MainFrame.class);
 
   public static final String TITLE = "ClipSnap by Joonas Vali, 2025";
-  public static final String[] ACCEPT_FILES = new String[]{"jpg"};
+  public static final String[] ACCEPT_FILES = new String[]{"jpg", "png", "jpeg"};
   public static final String SETTINGS_PANEL_KEY = "SETTINGS_PANEL";
   public static final String IMAGE_PANEL_KEY = "IMAGE_PANEL";
   public static final String TRANSCRIPTION_OUTPUT_FOLDER = "transcription-output";

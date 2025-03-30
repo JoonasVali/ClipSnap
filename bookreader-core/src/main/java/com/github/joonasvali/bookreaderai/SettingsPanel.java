@@ -8,7 +8,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
@@ -59,12 +58,12 @@ public class SettingsPanel extends JPanel {
 
     // Check if saved folder is valid; if so, enable "Continue" button
     String savedFolder = preferences.get(INPUT_FOLDER_KEY, "");
-    if (!savedFolder.isEmpty() && new File(savedFolder).isDirectory() && containsJpg(new File(savedFolder))) {
+    if (!savedFolder.isEmpty() && new File(savedFolder).isDirectory() && containsImage(new File(savedFolder))) {
       continueButton.setEnabled(true);
     } else {
       continueButton.setEnabled(false);
       if (!savedFolder.isEmpty()) {
-        folderErrorLabel.setText("Error: Saved folder is invalid or has no .jpg files.");
+        folderErrorLabel.setText("Error: Saved folder is invalid or has no .jpg or .png files.");
         folderErrorLabel.setForeground(Color.RED);
       }
     }
@@ -222,7 +221,7 @@ public class SettingsPanel extends JPanel {
   }
 
   /**
-   * Opens a directory chooser and validates that the folder contains .jpg files.
+   * Opens a directory chooser and validates that the folder contains .jpg or .png files.
    */
   private void onChooseFolder() {
     JFileChooser chooser = new JFileChooser(folderPathField.getText());
@@ -230,7 +229,7 @@ public class SettingsPanel extends JPanel {
     int result = chooser.showOpenDialog(SettingsPanel.this);
     if (result == JFileChooser.APPROVE_OPTION) {
       File selectedFolder = chooser.getSelectedFile();
-      if (selectedFolder.isDirectory() && containsJpg(selectedFolder)) {
+      if (selectedFolder.isDirectory() && containsImage(selectedFolder)) {
         logger.debug("Selected folder: {}", selectedFolder.getAbsolutePath());
         folderPathField.setText(selectedFolder.getAbsolutePath());
         folderErrorLabel.setText("");
@@ -238,8 +237,8 @@ public class SettingsPanel extends JPanel {
         // Save to preferences
         preferences.put(INPUT_FOLDER_KEY, selectedFolder.getAbsolutePath());
       } else {
-        logger.warn("Selected folder does not contain any .jpg files.");
-        folderErrorLabel.setText("Error: Selected folder does not contain any .jpg files.");
+        logger.warn("Selected folder does not contain any .jpg or .png files.");
+        folderErrorLabel.setText("Error: Selected folder does not contain any .jpg or .png files.");
         folderErrorLabel.setForeground(Color.RED);
         continueButton.setEnabled(false);
       }
@@ -247,17 +246,14 @@ public class SettingsPanel extends JPanel {
   }
 
   /**
-   * Checks if the provided folder contains at least one file ending in .jpg or .jpeg.
+   * Checks if the provided folder contains at least one file ending in .png, .jpg or .jpeg.
    */
-  private boolean containsJpg(File folder) {
-    File[] jpgFiles = folder.listFiles(new FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        String lowerName = name.toLowerCase();
-        return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg");
-      }
+  private boolean containsImage(File folder) {
+    File[] imageFiles = folder.listFiles((dir, name) -> {
+      String lowerName = name.toLowerCase();
+      return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png");
     });
-    return jpgFiles != null && jpgFiles.length > 0;
+    return imageFiles != null && imageFiles.length > 0;
   }
 
   public String getLanguage() {
