@@ -87,6 +87,12 @@ public class SentencePotentialMatcher {
       int s2CommonStart = ns2.mapping.get(lcsRes.posB - lcsRes.length);
       int s2CommonEnd = ns2.mapping.get(lcsRes.posB - 1) + 1;
       commonPart = s1.substring(s1CommonStart, s1CommonEnd);
+
+      // If the common part is only whitespace, consider it no match.
+      if (commonPart.trim().isEmpty()) {
+        return new MatchResult(0.0f, "", "", "");
+      }
+
       prefix = s1.substring(0, s1CommonStart);
       suffix = s2.substring(s2CommonEnd);
     }
@@ -107,7 +113,7 @@ public class SentencePotentialMatcher {
       String window = longStr.substring(i, i + windowLen);
       double sim = levenshteinSimilarity(shortStr, window);
       if (sim > bestSim) {
-        bestSim = (float)sim;
+        bestSim = (float) sim;
         bestIndex = i;
       }
       if (bestSim >= 0.9) {

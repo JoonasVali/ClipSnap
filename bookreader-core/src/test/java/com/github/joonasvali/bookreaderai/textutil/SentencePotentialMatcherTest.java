@@ -99,6 +99,39 @@ public class SentencePotentialMatcherTest {
     assertEquals(0.0, result.score, 0.001, "Empty string should result in 0.0 score");
   }
 
+
+  @Test
+  public void testShortNoMatch() {
+    String s1 = "\n...\n";
+    String s2 = "a.\n";
+    SentencePotentialMatcher.MatchResult result = matcher.match(s1, s2);
+    assertEquals(0.0, result.score, 0.001, "Short non match should result in 0.0 score");
+  }
+
+  @Test
+  public void testShortNoMatchJustLetter() {
+    String s1 = "a";
+    String s2 = "b";
+    SentencePotentialMatcher.MatchResult result = matcher.match(s1, s2);
+    assertEquals(0.0, result.score, 0.001, "Short non match should result in 0.0 score");
+  }
+
+  @Test
+  public void testShortNoMatchJustLetterWithPunctuationAndNewLine() {
+    String s1 = "\na...";
+    String s2 = "\nb...";
+    SentencePotentialMatcher.MatchResult result = matcher.match(s1, s2);
+    assertEquals(0.0, result.score, 0.001, "Short non match should result in 0.0 score");
+  }
+
+  @Test
+  public void testShortNoMatchJustLetterWithPunctuation() {
+    String s1 = "a...";
+    String s2 = "b...";
+    SentencePotentialMatcher.MatchResult result = matcher.match(s1, s2);
+    assertEquals(0.0, result.score, 0.001, "Short non match should result in 0.0 score");
+  }
+
   @Test
   public void testSubSentence() {
     String s1 = "While we wait I can't believe you are standing there\nThis is a serious matter.";
