@@ -23,7 +23,7 @@ public class TextJoiner {
     this.extension = null;
   }
 
-  public String join(String text1, String text2) {
+  public ProcessingResult<String> join(String text1, String text2) {
 
     String[] sentences1 = new TextSentenceSplitter().getSentences(text1);
     String[] sentences2 = new TextSentenceSplitter().getSentences(text2);
@@ -40,13 +40,11 @@ public class TextJoiner {
         result = new String[] { text1, text2 };
       }
 
-      return sentencesToString(result);
+      return new ProcessingResult<>(sentencesToString(result), 0, 0, 0 );
     }
 
     if (potentialResults == null) {
-      ProcessingResult<String> result = extension.fixText(sentencesToString(new String[] { text1, text2 }));
-      // TODO: tokens ?
-      return result.content();
+      return extension.fixText(sentencesToString(new String[] { text1, text2 }));
     }
 
     if (potentialResults.length > 1) {
@@ -55,11 +53,10 @@ public class TextJoiner {
         texts[i] = sentencesToString(takeAdjacentSentences(potentialResults[i], potentialResults[i].getCommonSentenceIndex(), true));
       }
       ProcessingResult<Integer> result = extension.chooseText(texts);
-      // TODO: tokens ?
       int choice = result.content();
-      return sentencesToString(potentialResults[choice].getSentences());
+      return new ProcessingResult<>(sentencesToString(potentialResults[choice].getSentences()), result.promptTokens(), result.completionTokens(), result.totalTokens());
     } else {
-      return sentencesToString(potentialResults[0].getSentences());
+      return new ProcessingResult<>(sentencesToString(potentialResults[0].getSentences()), 0,0 , 0);
     }
   }
 

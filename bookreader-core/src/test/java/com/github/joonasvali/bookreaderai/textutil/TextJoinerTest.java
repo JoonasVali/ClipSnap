@@ -13,8 +13,8 @@ public class TextJoinerTest {
     String text1 = "Hello, this is a sample text";
     String text2 = "text that continues the story.";
     String expected = "Hello, this is a sample text that continues the story.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String> result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -23,8 +23,8 @@ public class TextJoinerTest {
     String text1 = "Hello, this is a sample text ";
     String text2 = " Text that continues the story.";
     String expected = "Hello, this is a sample text that continues the story.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -33,7 +33,7 @@ public class TextJoinerTest {
       @Override
       public ProcessingResult<String> fixText(String text) {
         assertEquals("The quick brown fox jumps jum PS over the lazy dog.", text);
-        return new ProcessingResult<>("The quick brown fox jumps over the lazy dog.", 0, 0, 0);
+        return new ProcessingResult<>("The quick brown fox jumps over the lazy dog.", 1, 2, 3);
       }
 
       @Override
@@ -44,8 +44,11 @@ public class TextJoinerTest {
     String text1 = "The quick brown fox jumps";
     String text2 = "jum PS over the lazy dog.";
     String expected = "The quick brown fox jumps over the lazy dog.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String> result  = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
+    assertEquals(1, result.promptTokens());
+    assertEquals(2, result.completionTokens());
+    assertEquals(3, result.totalTokens());
   }
 
   @Test
@@ -54,8 +57,8 @@ public class TextJoinerTest {
     String text1 = "Let it be known, that the quick brown fox jumps";
     String text2 = "brownfox jumps over the lazy dog.";
     String expected = "Let it be known, that the quick brown fox jumps over the lazy dog.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -64,8 +67,8 @@ public class TextJoinerTest {
     String text1 = "A journey of a thous and miles begins with";
     String text2 = "thousand miles begins with a single step.";
     String expected = "A journey of a thous and miles begins with a single step.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -74,8 +77,8 @@ public class TextJoinerTest {
     String text1 = "A journey of a thous and miles, begins with";
     String text2 = "thousand miles. Begins with a single step.";
     String expected = "A journey of a thous and miles, begins with a single step.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -84,8 +87,8 @@ public class TextJoinerTest {
     String text1 = "A journey of a thous and miles begins with";
     String text2 = "thousand miles. begins with a single step,";
     String expected = "A journey of a thous and miles. begins with a single step,";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -111,8 +114,8 @@ public class TextJoinerTest {
         The era of the unstoppable force that
         will change the world forever.
         """;
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -121,8 +124,8 @@ public class TextJoinerTest {
     String text1 = "A journey of a thousand miles";
     String text2 = " AND miles begins with a single step.";
     String expected = "A journey of a thousand miles begins with a single step.";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -132,8 +135,8 @@ public class TextJoinerTest {
     String text1 = "Cakes that are delicious and healthy";
     String text2 = "are delicious and bad for your health";
     String expected = "Cakes that are delicious and bad for your health";
-    String result = textJoiner.join(text1, text2);
-    assertEquals(expected, result);
+    ProcessingResult<String>  result = textJoiner.join(text1, text2);
+    assertEquals(expected, result.content());
   }
 
   @Test
@@ -143,7 +146,7 @@ public class TextJoinerTest {
     String text2 = "threes. he tried to climb. They had fun and became inseparable. Max loved that day";
     String expected = "Max chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and became inseparable. Max loved that day";
 
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
   @Test
@@ -159,14 +162,17 @@ public class TextJoinerTest {
         assertEquals(2, texts.length);
         assertEquals("...named Luna teased him by darting up trees. he tried TO climb. They had fun and BECAME inseparable.", texts[0]);
         assertEquals("...named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable.", texts[1]);
-        return new ProcessingResult<>(1, 0, 0, 0);
+        return new ProcessingResult<>(1, 2, 3, 4);
       }
     });
     String text1 = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. THEY had fub";
     String text2 = "threes. he tried TO climb. They had fun and BECAME inseparable. Max loved that day";
     String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried to climb. They had fun and BECAME inseparable. Max loved that day";
 
-    assertEquals(expected, textJoiner.join(text1, text2));
+    assertEquals(expected, textJoiner.join(text1, text2).content());
+    assertEquals(2, textJoiner.join(text1, text2).promptTokens());
+    assertEquals(3, textJoiner.join(text1, text2).completionTokens());
+    assertEquals(4, textJoiner.join(text1, text2).totalTokens());
   }
 
 
@@ -177,7 +183,7 @@ public class TextJoinerTest {
     String text2 = "He tried TO climb. They had fun and BECAME inseparable. Max loved that day";
     String expected = "MAX chased butterflies, but a black cat named Luna teased him by darting up trees. He tried TO climb. They had fun and BECAME inseparable. Max loved that day";
 
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
 
@@ -205,7 +211,7 @@ public class TextJoinerTest {
         Ladybug, ladybug, fly away home. The cows are in the meadow. The sheep are in the corn.
         Where is the little logbook? The birds are in the sky. The fish are in the sea.
         """;
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
   @Test
@@ -233,7 +239,7 @@ public class TextJoinerTest {
         FISH HORSE MOUSE
         BEAR WOLF FOX
         """;
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
   @Test
@@ -262,7 +268,7 @@ public class TextJoinerTest {
         Danger is my middle name.
         FISH HORSE MOUSE
         """;
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
 
@@ -292,7 +298,7 @@ public class TextJoinerTest {
         Danger is my middle name.
         FISH HORSE MOUSE
         """;
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 
   @Test
@@ -322,6 +328,6 @@ public class TextJoinerTest {
         
         Kui hommikuks uus telefoniside sai maha veetud, tuli ümber korraldada ka raadioside. Viisime teise raadiojaama ühe patarei komandopunkti 227. jalaväepolgu juurde, et sealt jalaväe komandöri nõudmisel kutsuda välja meie suurtükiväe tuld. Esimest korda sai nähtud, et ka jalaväelased on huvitatud suurtükitulde väljakutsumisest. Väljaõpetamata jalaväe komandörid tahavad peale tungida selliselt nagu milotame kinofilmidest, kus tütipidi rünnati vaenlasele peale, et teha suuri vägitegusid.
         """;
-    assertEquals(expected, joiner.join(text1, text2));
+    assertEquals(expected, joiner.join(text1, text2).content());
   }
 }

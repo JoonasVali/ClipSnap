@@ -71,33 +71,43 @@ public class JoinedTranscriber {
         texts.add(result.content());
       }
 
-      callback.accept(new ProcessingResult<>(join(texts),
-          results.stream().mapToLong(ProcessingResult::promptTokens).sum(),
-          results.stream().mapToLong(ProcessingResult::completionTokens).sum(),
-          results.stream().mapToLong(ProcessingResult::totalTokens).sum()
+      ProcessingResult<String> joinedResult = join(texts);
+
+      callback.accept(new ProcessingResult<>(
+          joinedResult.content(),
+          results.stream().mapToLong(ProcessingResult::promptTokens).sum() + joinedResult.promptTokens(),
+          results.stream().mapToLong(ProcessingResult::completionTokens).sum() + joinedResult.completionTokens(),
+          results.stream().mapToLong(ProcessingResult::totalTokens).sum() + joinedResult.totalTokens()
       ));
     });
 
   }
 
-  private String join(List<String> results) {
+  private ProcessingResult<String> join(List<String> results) {
     if (results.size() == 1) {
-      return results.getFirst();
+      return new ProcessingResult<>(results.getFirst(), 0, 0, 0);
     }
     logger.debug("Joining {} texts", results.size());
 
     TextJoiner joiner = new TextJoiner(new TextJoinerAI(language, story));
     String joinedText = results.getFirst();
+    long totalTokens = 0;
+    long promptTokens = 0;
+    long completionTokens = 0;
 
     logger.debug("(1/"  + results.size() + ")" + "First text: {}", joinedText);
     for (int i = 1; i < results.size(); i++) {
       String indicator = "(" + (i + 1) +"/"  + results.size() + ")";
       logger.debug(indicator + " Joining with text: {}", results.get(i));
-      joinedText = joiner.join(joinedText, results.get(i));
+      ProcessingResult<String> result = joiner.join(joinedText, results.get(i));
+      promptTokens += result.promptTokens();
+      completionTokens += result.completionTokens();
+      totalTokens += result.totalTokens();
+      joinedText = result.content();
       logger.debug(indicator + "Result after joining: {}", joinedText);
     }
 
-    return joinedText;
+    return new ProcessingResult<>(joinedText, promptTokens, completionTokens, totalTokens);
   }
 
   public void setProgressUpdateUtility(ProgressUpdateUtility progressUpdateUtility) {
