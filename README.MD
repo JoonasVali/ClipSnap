@@ -4,7 +4,7 @@
 
 ⚠️ Caution
 
-I put this project together quickly over a weekend (with a fair bit of AI help), so it’s still in its early stages and 
+I put this project together quickly (with a fair bit of AI help), so it’s still in its early stages and 
 mostly untested. I originally built it for a specific need, but figured it might be useful to others too—so I’m sharing 
 it. That said, expect some rough edges, and use it with caution!
 

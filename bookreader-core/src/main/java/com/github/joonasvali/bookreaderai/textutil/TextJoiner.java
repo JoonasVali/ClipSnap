@@ -1,147 +1,220 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
-/**
- * A class that joins two text snippets together, trying to avoid repeating the same information.
- *
- * This class is 100% AI generated using test-driven development, good luck!
- */
+import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
+import com.github.joonasvali.bookreaderai.textutil.restoration.TextSentenceSplitter;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.PotentialResult;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAIExtension;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public class TextJoiner {
+  private final SentencePotentialMatcher fuzzyMatcher = new SentencePotentialMatcher();
+  private final TextJoinerAIExtension extension;
 
-  public String join(String text1, String text2) {
-    if (text1 == null) text1 = "";
-    if (text2 == null) text2 = "";
+  public TextJoiner(TextJoinerAIExtension extension) {
+    this.extension = extension;
+  }
 
-    // Remove extra leading/trailing whitespace.
-    String s1 = text1.strip();
-    String s2 = text2.strip();
-    if (s1.isEmpty()) return s2;
-    if (s2.isEmpty()) return s1;
+  public TextJoiner() {
+    this.extension = null;
+  }
 
-    // Normalize s1 for overlap detection.
-    NormalizedResult nr1 = normalize(s1);
+  public ProcessingResult<String> join(String text1, String text2) {
 
-    // Try to find the best overlap from s2.
-    Overlap bestOverlap = new Overlap(0, 0, null);
-    // Only consider candidates starting at word boundaries.
-    for (int j = 0; j < s2.length(); j++) {
-      if (j == 0 || Character.isWhitespace(s2.charAt(j - 1))) {
-        String candidate = s2.substring(j);
-        NormalizedResult nrCandidate = normalize(candidate);
-        int common = getCommonOverlap(nr1.normalized, nrCandidate.normalized);
-        if (common > bestOverlap.length) {
-          bestOverlap.length = common;
-          bestOverlap.startInS2 = j;
-          bestOverlap.normCandidate = nrCandidate;
+    String[] sentences1 = new TextSentenceSplitter().getSentences(text1);
+    String[] sentences2 = new TextSentenceSplitter().getSentences(text2);
+
+    PotentialResult[] potentialResults = join(
+        sentences1,
+        sentences2
+    );
+
+    if (extension == null) {
+      String[] result = potentialResults != null ? potentialResults[0].getSentences() : null;
+
+      if (result == null) {
+        result = new String[] { text1, text2 };
+      }
+
+      return new ProcessingResult<>(sentencesToString(result), 0, 0, 0 );
+    }
+
+    if (potentialResults == null) {
+      return extension.fixText(sentencesToString(new String[] { text1, text2 }));
+    }
+
+    if (potentialResults.length > 1) {
+      String[] texts = new String[potentialResults.length];
+      for (int i = 0; i < potentialResults.length; i++) {
+        texts[i] = sentencesToString(takeAdjacentSentences(potentialResults[i], potentialResults[i].getCommonSentenceIndex(), true));
+      }
+      ProcessingResult<Integer> result = extension.chooseText(texts);
+      int choice = result.content();
+      return new ProcessingResult<>(sentencesToString(potentialResults[choice].getSentences()), result.promptTokens(), result.completionTokens(), result.totalTokens());
+    } else {
+      return new ProcessingResult<>(sentencesToString(potentialResults[0].getSentences()), 0,0 , 0);
+    }
+  }
+
+  private String[] takeAdjacentSentences(PotentialResult potentialResult, int commonSentenceIndex, boolean cut) {
+    List<String> result = new ArrayList<>(3);
+    // Loop from one sentence before to one sentence after the common sentence.
+    for (int i = commonSentenceIndex - 1; i <= commonSentenceIndex + 1; i++) {
+      if (i >= 0 && i < potentialResult.getSentences().length) {
+        if (cut && i != commonSentenceIndex) {
+          result.add(cut(potentialResult.getSentence(i), i == commonSentenceIndex - 1));
+        } else {
+          result.add(potentialResult.getSentence(i));
+        }
+      }
+    }
+    return result.toArray(new String[0]);
+  }
+
+  private String cut(String input, boolean cutBefore) {
+    int maxWords = 8;
+    String[] words = input.split("\\s+");
+    if (words.length <= maxWords) {
+      return input;
+    }
+    if (cutBefore) {
+      return "..." + String.join(" ", Arrays.copyOfRange(words, words.length - maxWords, words.length));
+    } else {
+      return String.join(" ", Arrays.copyOfRange(words, 0, maxWords)) + "...";
+    }
+  }
+
+  private String sentencesToString(String[] sentences) {
+    return Arrays.stream(sentences)
+        .reduce((s1, s2) -> {
+          if (!s1.endsWith("\n") && !s2.startsWith("\n")) {
+            return s1 + " " + s2;
+          }
+          return s1 + s2;
+        })
+        .orElse("");
+  }
+
+  private PotentialResult[] join(String[] sentences1, String[] sentences2) {
+    List<PotentialResult> potentialResultList = new ArrayList<>();
+    for (int firstSentenceIndex = sentences1.length - 1; firstSentenceIndex >= 0; firstSentenceIndex--) {
+      for (int secondSentenceIndex = 0; secondSentenceIndex < sentences2.length; secondSentenceIndex++) {
+        String firstSentence = sentences1[firstSentenceIndex];
+        String secondSentence = sentences2[secondSentenceIndex];
+        // This works in case there's just one sentence in each text.
+        SentencePotentialMatcher.MatchResult result = fuzzyMatcher.match(firstSentence, secondSentence);
+
+        int firstOffset = sentences1.length - 1 - firstSentenceIndex;
+        int secondOffset = secondSentenceIndex;
+
+        if (firstSentence.startsWith(result.prefix) && secondSentence.endsWith(result.suffix) && (result.score > 0.2 || (firstOffset == 0 && secondOffset == 0)) ) {
+          String newSentence = result.prefix + result.commonPart + result.suffix;
+          Set<String> candidateCommonSentence = new HashSet<>();
+          candidateCommonSentence.add(newSentence);
+
+
+          if (removePunctuationAndWhiteSpace(result.prefix).isEmpty() && removePunctuationAndWhiteSpace(result.suffix).isEmpty()) {
+            candidateCommonSentence.add(firstSentence);
+            candidateCommonSentence.add(secondSentence);
+          }
+
+          String[] sacrificedSentencesFromFirst = sliceSentences(sentences1, firstSentenceIndex, true);
+          String[] sacrificedSentencedFromSecond = sliceSentences(sentences2, secondSentenceIndex, false);
+
+          for (String sentence : candidateCommonSentence) {
+            int discardedWordsFirst = countDiscardedWords(firstSentence, sentence);
+            int discardedWordsSecond = countDiscardedWords(secondSentence, sentence);
+
+            String[] candidate = buildSentences(sentences1, sentences2, firstSentenceIndex, secondSentenceIndex, sentence);
+            PotentialResult potentialResult = new PotentialResult(
+                candidate, sentences1.length, sentences2.length, sentence, result.score, Math.max(discardedWordsFirst, discardedWordsSecond), firstSentence, secondSentence,
+                sacrificedSentencesFromFirst, sacrificedSentencedFromSecond, firstSentenceIndex
+            );
+            potentialResultList.add(potentialResult);
+          }
         }
       }
     }
 
-    // Discard a one-character overlap if it doesn't start at index 0 to avoid false positives.
-    if (bestOverlap.length == 1 && bestOverlap.startInS2 != 0) {
-      bestOverlap.length = 0;
+    boolean hasOnlyTouchingSentenceWithNoMatch =
+        potentialResultList.size() == 1 &&
+        // 50%+ of words are discarded as a result of the join
+        potentialResultList.getFirst().getDiscardedWords() >= (WordCount.countWords(potentialResultList.getFirst().getCommonSentence()) + potentialResultList.getFirst().getDiscardedWords()) * 0.5f &&
+        potentialResultList.getFirst().getFirstTextSentenceOffset() == 0 &&
+        potentialResultList.getFirst().getSecondTextSentenceOffset() == 0 &&
+        potentialResultList.getFirst().getCalculatedScore() < 0.5f;
+
+    if (potentialResultList.isEmpty() || hasOnlyTouchingSentenceWithNoMatch) {
+      return null;
     }
 
-    String joined;
-    // If we found a nonzero overlap, remove the overlapped part from s2.
-    if (bestOverlap.length > 0) {
-      int offsetInCandidate = bestOverlap.normCandidate.getOriginalIndexForNormalizedIndex(bestOverlap.length);
-      int joinIndexInS2 = bestOverlap.startInS2 + offsetInCandidate;
-      joined = s1 + s2.substring(joinIndexInS2);
+    double maxScore = potentialResultList
+        .stream()
+        .mapToDouble(PotentialResult::getCalculatedScore).max().orElse(0);
+
+    if (maxScore < 0.11) {
+      // With so low score we have no confidence in the result. Let's just append.
+      return null;
+    }
+
+    // Get the ones with max score:
+    PotentialResult[] maxScored = potentialResultList
+        .stream()
+        .filter(r -> r.getCalculatedScore() >= maxScore - 0.00001)
+        .toArray(PotentialResult[]::new);
+
+    return maxScored;
+  }
+
+  public String[] sliceSentences(String[] sentences, int indexExcluding, boolean forward) {
+    if (forward) {
+      return Arrays.copyOfRange(sentences, indexExcluding + 1, sentences.length);
     } else {
-      // No valid overlap found: join with a space if needed.
-      if (s1.endsWith(" ") || s2.startsWith(" ")) {
-        joined = s1 + s2;
-      } else {
-        joined = s1 + " " + s2;
-      }
-    }
-
-    // Fix the ending punctuation if necessary.
-    return fixEndingPunctuation(joined);
-  }
-
-  // Returns the length (in normalized characters) of the largest overlap where the suffix of norm1
-  // equals the prefix of norm2.
-  private int getCommonOverlap(String norm1, String norm2) {
-    int max = Math.min(norm1.length(), norm2.length());
-    int best = 0;
-    for (int k = 1; k <= max; k++) {
-      String suffix = norm1.substring(norm1.length() - k);
-      String prefix = norm2.substring(0, k);
-      if (suffix.equals(prefix)) {
-        best = k;
-      }
-    }
-    return best;
-  }
-
-  // Normalize a string by removing whitespace and punctuation and converting to lower case.
-  // Only letters and digits are kept.
-  private NormalizedResult normalize(String s) {
-    StringBuilder sb = new StringBuilder();
-    int[] mapping = new int[s.length()]; // worst-case size
-    int count = 0;
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      if (Character.isLetterOrDigit(c)) {
-        sb.append(Character.toLowerCase(c));
-        mapping[count] = i;
-        count++;
-      }
-    }
-    int[] mappingTrunc = new int[count];
-    System.arraycopy(mapping, 0, mappingTrunc, 0, count);
-    return new NormalizedResult(sb.toString(), mappingTrunc);
-  }
-
-  // Helper method to fix ending punctuation:
-  // If the last non-whitespace character is punctuation but not a period, question mark, or exclamation mark,
-  // then replace it with a period.
-  private String fixEndingPunctuation(String text) {
-    int i = text.length() - 1;
-    while (i >= 0 && Character.isWhitespace(text.charAt(i))) {
-      i--;
-    }
-    if (i >= 0) {
-      char last = text.charAt(i);
-      // Check if it's punctuation (and not one of . ? !)
-      if (!Character.isLetterOrDigit(last) && last != '.' && last != '?' && last != '!') {
-        text = text.substring(0, i) + "." + text.substring(i + 1);
-      }
-    }
-    return text;
-  }
-
-  // Helper class that holds a normalized version of a string along with a mapping from each
-  // character in the normalized string back to its index in the original string.
-  private static class NormalizedResult {
-    String normalized;
-    // mapping[i] gives the index in the original string of the i-th character in normalized.
-    int[] mapping;
-
-    NormalizedResult(String normalized, int[] mapping) {
-      this.normalized = normalized;
-      this.mapping = mapping;
-    }
-
-    // Given a normalized overlap length (number of normalized characters),
-    // return the corresponding offset in the original string.
-    int getOriginalIndexForNormalizedIndex(int normIndex) {
-      if (normIndex == 0) return 0;
-      return mapping[normIndex - 1] + 1;
+      return Arrays.copyOfRange(sentences, 0, indexExcluding);
     }
   }
 
-  // Helper class to store details about an overlap candidate.
-  private static class Overlap {
-    int length;           // overlap length (in normalized characters)
-    int startInS2;        // starting index in s2 (the original trimmed s2) for the candidate
-    NormalizedResult normCandidate; // normalized result for the candidate substring
 
-    Overlap(int length, int startInS2, NormalizedResult normCandidate) {
-      this.length = length;
-      this.startInS2 = startInS2;
-      this.normCandidate = normCandidate;
+  private int countDiscardedWords(String sentence, String match) {
+    if (sentence == null || match == null) {
+      return 0;
     }
+    // Remove punctuation and convert to lowercase for both the sentence and the match string.
+    String cleanedSentence = sentence.replaceAll("[\\p{Punct}]", "").toLowerCase();
+    String cleanedMatch = match.replaceAll("[\\p{Punct}]", "").toLowerCase();
+
+    // Split the cleaned sentence by whitespace.
+    String[] words = cleanedSentence.split("\\s+");
+    String[] matchingWords = cleanedMatch.split("\\s+");
+
+    return Math.max(0, words.length - matchingWords.length);
+  }
+
+
+  private String removePunctuationAndWhiteSpace(String prefix) {
+    return prefix.replaceAll("[^a-zA-Z0-9]", "");
+  }
+
+  private String[] buildSentences(String[] sentences1, String[] sentences2, int firstSentenceIndex, int secondSentenceIndex, String commonSentence) {
+    String[] returnedSentences = new String[firstSentenceIndex + sentences2.length - secondSentenceIndex];
+
+
+    for (int i = 0; i < firstSentenceIndex; i++) {
+      returnedSentences[i] = sentences1[i];
+    }
+
+    returnedSentences[firstSentenceIndex] = commonSentence;
+
+    for (int i = 0; i < sentences2.length - (secondSentenceIndex + 1); i++) {
+      returnedSentences[firstSentenceIndex + 1 + i] = sentences2[secondSentenceIndex + i + 1];
+    }
+
+    return returnedSentences;
   }
 }
+
+

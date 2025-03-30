@@ -3,7 +3,7 @@ package com.github.joonasvali.bookreaderai;
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.PerspectiveImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
-import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
+import com.github.joonasvali.bookreaderai.textutil.LineUtil;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 import org.slf4j.Logger;
 
@@ -236,7 +236,7 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    BufferedImage[] images = CutImageUtil.cutImage(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
+    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX);
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));
@@ -247,8 +247,13 @@ public class ImageContentPanel extends JPanel {
 
     try {
       transcriber.transcribeImages(result -> {
-        LineBreaker lineBreaker = new LineBreaker();
-        String text = lineBreaker.lineBreakAfterEvery(result.text(), LINE_BREAK_CHARS);
+        LineUtil lineUtil = new LineUtil();
+        String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
+
+        logger.info("-- Tokens used --");
+        logger.info("Used completion tokens: " + result.completionTokens());
+        logger.info("Used prompt tokens: " + result.promptTokens());
+        logger.info("User total tokens: " + result.totalTokens());
 
         if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
           // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.

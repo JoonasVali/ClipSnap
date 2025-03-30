@@ -3,6 +3,7 @@ package com.github.joonasvali.bookreaderai.transcribe;
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.TextJoiner;
+import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,27 +67,47 @@ public class JoinedTranscriber {
 
       List<String> texts = new ArrayList<>();
       for (ProcessingResult<String> result : results) {
-        texts.add(result.text());
+        logger.debug("Transcription result: {}", result.content());
+        texts.add(result.content());
       }
 
-      callback.accept(new ProcessingResult<>(join(texts),
-          results.stream().mapToLong(ProcessingResult::promptTokens).sum(),
-          results.stream().mapToLong(ProcessingResult::completionTokens).sum(),
-          results.stream().mapToLong(ProcessingResult::totalTokens).sum()
+      ProcessingResult<String> joinedResult = join(texts);
+
+      callback.accept(new ProcessingResult<>(
+          joinedResult.content(),
+          results.stream().mapToLong(ProcessingResult::promptTokens).sum() + joinedResult.promptTokens(),
+          results.stream().mapToLong(ProcessingResult::completionTokens).sum() + joinedResult.completionTokens(),
+          results.stream().mapToLong(ProcessingResult::totalTokens).sum() + joinedResult.totalTokens()
       ));
     });
 
   }
 
-  private String join(List<String> results) {
-    TextJoiner joiner = new TextJoiner();
-    String joinedText = results.get(0);
+  private ProcessingResult<String> join(List<String> results) {
+    if (results.size() == 1) {
+      return new ProcessingResult<>(results.getFirst(), 0, 0, 0);
+    }
+    logger.debug("Joining {} texts", results.size());
 
+    TextJoiner joiner = new TextJoiner(new TextJoinerAI(language, story));
+    String joinedText = results.getFirst();
+    long totalTokens = 0;
+    long promptTokens = 0;
+    long completionTokens = 0;
+
+    logger.debug("(1/"  + results.size() + ")" + "First text: {}", joinedText);
     for (int i = 1; i < results.size(); i++) {
-      joinedText = joiner.join(joinedText, results.get(i));
+      String indicator = "(" + (i + 1) +"/"  + results.size() + ")";
+      logger.debug(indicator + " Joining with text: {}", results.get(i));
+      ProcessingResult<String> result = joiner.join(joinedText, results.get(i));
+      promptTokens += result.promptTokens();
+      completionTokens += result.completionTokens();
+      totalTokens += result.totalTokens();
+      joinedText = result.content();
+      logger.debug(indicator + "Result after joining: {}", joinedText);
     }
 
-    return joinedText;
+    return new ProcessingResult<>(joinedText, promptTokens, completionTokens, totalTokens);
   }
 
   public void setProgressUpdateUtility(ProgressUpdateUtility progressUpdateUtility) {

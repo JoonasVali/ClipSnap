@@ -1,4 +1,4 @@
-
+clipsnap.properties
 /personal/
 **/target/
 /target/
@@ -13,5 +13,3 @@
 
 *.iml
 *.idea
-# Temporarily excluded
-**/bone_wraiths.yaml

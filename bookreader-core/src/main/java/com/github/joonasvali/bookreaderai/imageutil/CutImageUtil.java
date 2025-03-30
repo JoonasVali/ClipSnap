@@ -58,7 +58,7 @@ public class CutImageUtil {
     return result;
   }
 
-  public static BufferedImage[] cutImage(BufferedImage image, int verticalPieces, int overlapPx) {
+  public static BufferedImage[] splitImageIntoSections(BufferedImage image, int verticalPieces, int overlapPx) {
     int width = image.getWidth();
     int height = image.getHeight();
 

@@ -9,11 +9,14 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class ImageAnalysis {
+  private static final Logger logger = LoggerFactory.getLogger(ImageAnalysis.class);
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
   private final String prompt;
@@ -43,12 +47,26 @@ public class ImageAnalysis {
 
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
+
     ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
     BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
 
     String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
+
+    if (logger.isDebugEnabled()) {
+      Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      logger.debug("Writing image to " + file);
+      ImageIO.write(bufferedImage, "jpg", file.toFile());
+    }
+
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
     String result =  sendRequestToOpenAI(jsonBody);
+
+    if (result.startsWith("Error")) {
+      throw new RuntimeException(result);
+    }
+
     JSONObject jsonObject = new JSONObject(result);
     JSONArray choices = jsonObject.getJSONArray("choices");
     JSONObject choice = choices.getJSONObject(0);
@@ -65,21 +83,39 @@ public class ImageAnalysis {
     BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
 
     String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
-    JSONObject jsonBody = createJsonPayload(base64Image, answers);
-    String result =  sendRequestToOpenAI(jsonBody);
-    JSONObject jsonObject = new JSONObject(result);
-    JSONArray choices = jsonObject.getJSONArray("choices");
-    String[] results = new String[answers];
-    for (int i = 0; i < answers; i++) {
-      JSONObject choice = choices.getJSONObject(i);
-      JSONObject message = choice.getJSONObject("message");
-      results[i] = message.getString("content");
+
+    if (logger.isDebugEnabled()) {
+      Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      logger.debug("Writing image to " + file);
+      ImageIO.write(bufferedImage, "jpg", file.toFile());
     }
-    JSONObject usage = jsonObject.getJSONObject("usage");
-    int totalTokens = usage.getInt("total_tokens");
-    int promptTokens = usage.getInt("prompt_tokens");
-    int completionTokens = usage.getInt("completion_tokens");
-    return new ProcessingResult<>(results, totalTokens, promptTokens, completionTokens);
+
+    JSONObject jsonBody = createJsonPayload(base64Image, answers);
+    String result = sendRequestToOpenAI(jsonBody);
+
+    if (result.startsWith("Error")) {
+      throw new RuntimeException(result);
+    }
+
+    try {
+      JSONObject jsonObject = new JSONObject(result);
+      JSONArray choices = jsonObject.getJSONArray("choices");
+      String[] results = new String[answers];
+      for (int i = 0; i < answers; i++) {
+        JSONObject choice = choices.getJSONObject(i);
+        JSONObject message = choice.getJSONObject("message");
+        results[i] = message.getString("content");
+      }
+      JSONObject usage = jsonObject.getJSONObject("usage");
+      int totalTokens = usage.getInt("total_tokens");
+      int promptTokens = usage.getInt("prompt_tokens");
+      int completionTokens = usage.getInt("completion_tokens");
+      return new ProcessingResult<>(results, totalTokens, promptTokens, completionTokens);
+    } catch (Exception e) {
+      logger.debug("Exceptional result: " + result);
+      throw new RuntimeException(e);
+    }
   }
 
   public JSONObject createJsonPayload(String base64Image, int n) {
@@ -109,6 +145,10 @@ public class ImageAnalysis {
   }
 
   public static String sendRequestToOpenAI(JSONObject jsonBody) throws IOException {
+    return sendRequestToOpenAI(jsonBody, 0);
+  }
+
+  public static String sendRequestToOpenAI(JSONObject jsonBody, int retry) throws IOException {
     OkHttpClient client = new OkHttpClient.Builder()
         .connectTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(120, TimeUnit.SECONDS)
@@ -128,8 +168,17 @@ public class ImageAnalysis {
       if (response.isSuccessful() && response.body() != null) {
         return response.body().string();
       } else {
+        if (response.code() == 429) {
+          if (retry < 5) {
+            Thread.sleep((retry + 1) * 3000L);
+            return sendRequestToOpenAI(jsonBody, retry + 1);
+          }
+        }
         return "Error: " + response.code() + " - " + response.message();
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
+    return "Error: Unable to complete request";
   }
 }
