@@ -142,14 +142,35 @@ public class SentencePotentialMatcherTest {
 
 
   @Test
+  public void testSubSentenceCutoff() {
+    String s1 = "While we wait I will tell you a story.";
+    String s2 = "While we wait I will tell you a sto";
+    SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
+    SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
+
+    assertTrue(result1.score >= 0.9 && result1.score < 0.999, "Subsentence match should return a high score, got: " + result1.score);
+    assertTrue(result2.score >= 0.9 && result2.score < 0.999, "Subsentence match should return a high score, got: " + result2.score);
+
+    // Also, the common part should equal the normalized contained sentence.
+
+//    assertEquals("While we wait I will tell you a story\n", result1.prefix, "Prefix should match");
+//    assertEquals("This is a serious matter.", result1.commonPart);
+//    assertEquals("", result1.suffix, "Suffix should be empty");
+//
+//    assertEquals("This is a serious matter.", result2.commonPart);
+//    assertEquals("", result2.suffix, "Suffix should be empty");
+//    assertEquals("", result2.prefix, "Prefix should be empty");
+  }
+
+  @Test
   public void testSubSentence() {
     String s1 = "While we wait I can't believe you are standing there\nThis is a serious matter.";
     String s2 = "This is a serious matter.";
     SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
     SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
 
-    assertTrue(result1.score >= 0.9, "Subsentence match should return a high score, got: " + result1.score);
-    assertTrue(result2.score >= 0.9, "Subsentence match should return a high score, got: " + result2.score);
+    assertTrue(result1.score >= 0.9 && result1.score < 0.999, "Subsentence match should return a high score, got: " + result1.score);
+    assertTrue(result2.score >= 0.9 && result2.score < 0.999, "Subsentence match should return a high score, got: " + result2.score);
 
     // Also, the common part should equal the normalized contained sentence.
 
@@ -169,8 +190,8 @@ public class SentencePotentialMatcherTest {
     SentencePotentialMatcher.MatchResult result1 = matcher.match(s1, s2);
     SentencePotentialMatcher.MatchResult result2 = matcher.match(s2, s1);
 
-    assertTrue(result1.score >= 0.9, "Partial subsentence match should return a high score, got: " + result1.score);
-    assertTrue(result2.score >= 0.9, "Partial subsentence match should return a high score, got: " + result2.score);
+    assertTrue(result1.score >= 0.9 && result1.score < 0.999, "Partial subsentence match should return a high score, got: " + result1.score);
+    assertTrue(result2.score >= 0.9 && result2.score < 0.999, "Partial subsentence match should return a high score, got: " + result2.score);
 
     assertEquals("While we wait I can't believe you are standing there\n", result1.prefix, "Prefix should match");
     assertEquals("", result1.suffix, "Suffix should be empty");
@@ -265,7 +286,5 @@ public class SentencePotentialMatcherTest {
 
     assertTrue(result1.score < 0.1, "Got too high score: " + result1.score);
     assertTrue(result2.score < 0.1, "Got too high score: " + result2.score);
-
-
   }
 }

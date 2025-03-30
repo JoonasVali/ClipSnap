@@ -1,6 +1,6 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
-public class LineBreaker {
+public class LineUtil {
 
   /**
    * Wraps the given content so that each line does not exceed maxWidth characters.

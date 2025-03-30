@@ -215,9 +215,16 @@ public class SentencePotentialMatcher {
         bestIndex = i;
       }
       if (bestSim >= 0.9f) {
+        // Early exit if we already have a high similarity
         break;
       }
     }
+
+    // If we found a perfect 1.0 but shortStr is truly a "sub-sentence", slightly reduce it
+    if (bestSim == 1.0f && shortStr.length() < longStr.length()) {
+      bestSim = 0.98f;
+    }
+
     return bestSim >= 0.9f ? new FuzzyContainmentResult(bestSim, bestIndex) : null;
   }
 
@@ -359,8 +366,8 @@ public class SentencePotentialMatcher {
   }
 
   /**
-
-   Helper data class for fuzzy containment results. */
+   Helper data class for fuzzy containment results.
+   */
   private static class FuzzyContainmentResult {
     final float similarity;
     final int startIndex; // starting index in the container's normalized string

@@ -3,7 +3,7 @@ package com.github.joonasvali.bookreaderai;
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.PerspectiveImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
-import com.github.joonasvali.bookreaderai.textutil.LineBreaker;
+import com.github.joonasvali.bookreaderai.textutil.LineUtil;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 import org.slf4j.Logger;
 
@@ -247,8 +247,8 @@ public class ImageContentPanel extends JPanel {
 
     try {
       transcriber.transcribeImages(result -> {
-        LineBreaker lineBreaker = new LineBreaker();
-        String text = lineBreaker.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
+        LineUtil lineUtil = new LineUtil();
+        String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
 
         if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
           // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
