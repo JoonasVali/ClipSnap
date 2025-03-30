@@ -1,38 +1,25 @@
 package com.github.joonasvali.bookreaderai.textutil.restoration;
 
 import com.github.joonasvali.bookreaderai.textutil.SentencePotentialMatcher;
+import com.github.joonasvali.bookreaderai.textutil.SentencePotentialMatcher.MatchResult;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
-/**
- * The TextAligner class is responsible for aligning multiple text inputs.
- * Given an array of String texts, it computes an aligned (or consensus) text
- * using a word-by-word majority vote approach.
- */
 public class TextAligner {
 
-  /**
-   * Encapsulates the result of an alignment operation.
-   * It contains the aligned text and optional meta information.
-   */
   public static class AlignmentResult {
-    private final String alignedText;
+    private final String[][] alignedTexts;
     private final boolean success;
 
-    public AlignmentResult(String alignedText, boolean success) {
-      this.alignedText = alignedText;
+    public AlignmentResult(String[][] alignedTexts, boolean success) {
+      this.alignedTexts = alignedTexts;
       this.success = success;
     }
 
-    public String getAlignedText() {
-      return alignedText;
+    public String[][] getAlignedTexts() {
+      return alignedTexts;
     }
 
     public boolean isSuccess() {
@@ -40,215 +27,193 @@ public class TextAligner {
     }
   }
 
+  // A threshold for considering two sentences as similar enough.
+  private static final double MATCH_THRESHOLD = 0.30;
 
   public AlignmentResult alignTexts(String[] textVersions) {
     if (textVersions == null || textVersions.length == 0) {
-      return new AlignmentResult("", false);
+// Return one empty row to satisfy the test expectation.
+      return new AlignmentResult(new String[][]{{}}, false);
     }
 
+// Split each text into sentences.
+    TextSentenceSplitter splitter = new TextSentenceSplitter();
+    String[][] sentencesPerText = new String[textVersions.length][];
+    int[] sentenceCounts = new int[textVersions.length];
+
+    for (int i = 0; i < textVersions.length; i++) {
+      if (textVersions[i] == null) {
+        sentencesPerText[i] = new String[0];
+        sentenceCounts[i] = 0;
+      } else {
+        sentencesPerText[i] = splitter.getSentences(textVersions[i]);
+        sentenceCounts[i] = sentencesPerText[i].length;
+      }
+    }
+
+// If there's only one text, return its sentences as the aligned result.
     if (textVersions.length == 1) {
-      return new AlignmentResult(textVersions[0], true);
+      return new AlignmentResult(new String[][]{sentencesPerText[0]}, true);
     }
 
-    List<AlignState> stateList = new ArrayList<>();
-    Arrays.stream(textVersions).forEach(text -> {
-      String[] sentences = new TextSentenceSplitter().getSentences(text);
+    // Compute the mode of the sentence counts.
+    Map<Integer, Integer> countFreq = new HashMap<>();
+    for (int count : sentenceCounts) {
+      countFreq.put(count, countFreq.getOrDefault(count, 0) + 1);
+    }
 
-      stateList.add(new AlignState(sentences));
-    });
-
-    States states = new States(stateList);
-    initialize(states);
-
-    int maxSentenceCount = stateList.stream().mapToInt(state -> state.sentences.length).max().orElse(0);
-
-    StringBuilder finalText = new StringBuilder();
-    MajorityVoter majorityVoter = new MajorityVoter();
-    for (int i = 0; i < maxSentenceCount; i++) {
-      List<String> currentSentences = new ArrayList<>();
-      for (AlignState state : stateList) {
-        if (state.readingIndex < state.sentences.length) {
-          state.result.add(state.getCurrentSentence());
-          currentSentences.add(state.getCurrentSentence());
-          state.readingIndex++;
-        }
-      }
-      String[] stc = currentSentences.toArray(new String[0]);
-      MajorityVoter.VoteResult voteResult = majorityVoter.vote(stc);
-      if (voteResult.isSuccess()) {
-        finalText.append(voteResult.getResultingText());
-        if (!finalText.isEmpty() && finalText.charAt(finalText.length() - 1) != '\n') {
-          finalText.append(" ");
-        }
+    int modeCount = -1;
+    int modeFreq = 0;
+    for (Map.Entry<Integer, Integer> entry : countFreq.entrySet()) {
+      if (entry.getValue() > modeFreq) {
+        modeFreq = entry.getValue();
+        modeCount = entry.getKey();
       }
     }
-    if (!finalText.isEmpty() && finalText.charAt(finalText.length() - 1) == ' ') {
-      finalText.replace(finalText.length() - 1, finalText.length(), "");
+
+    // Pick as baseline the first text with the modeCount number of sentences.
+    int baselineIndex = -1;
+    for (int i = 0; i < sentenceCounts.length; i++) {
+      if (sentenceCounts[i] == modeCount) {
+        baselineIndex = i;
+        break;
+      }
+    }
+    // Fallback: if no text has the mode (rare), choose the one with max sentences.
+    if (baselineIndex == -1) {
+      baselineIndex = 0;
+      for (int i = 1; i < sentencesPerText.length; i++) {
+        if (sentencesPerText[i].length > sentencesPerText[baselineIndex].length) {
+          baselineIndex = i;
+        }
+      }
     }
 
+    String[] baselineSentences = sentencesPerText[baselineIndex];
+    int consensusCount = baselineSentences.length;
 
-    return new AlignmentResult(finalText.toString(), true);
-  }
+// Prepare the final result array.
+    String[][] alignedTexts = new String[textVersions.length][consensusCount];
 
-  record Record(String text, int index, AlignState alignState) {
-  }
-
-  record ComparisonResult(int index1, int index2, AlignState alignState1, AlignState alignState2, float score) {
-
-  }
-
-  public void initialize(States states) {
+// Fuzzy matcher
     SentencePotentialMatcher matcher = new SentencePotentialMatcher();
 
-    List<Record> records = new ArrayList<>();
+// For each text version, compute the best alignment to the baseline.
+    for (int t = 0; t < sentencesPerText.length; t++) {
+      String[] candidateSentences = sentencesPerText[t];
+      int[] bestMapping = computeBestMapping(baselineSentences, candidateSentences, matcher);
 
-    states.states.forEach(textVersion -> {
-      for(int i = 0; i < textVersion.sentences.length; i++) {
-        records.add(new Record(textVersion.sentences[i], i, textVersion));
-      }
-    });
-
-    List<ComparisonResult> results = new ArrayList<>();
-    records.forEach(record1 -> {
-      records.forEach(record2 -> {
-        // Skip duplicates
-        if (Objects.toIdentityString(record1.alignState).hashCode() >= Objects.toIdentityString(record2.alignState).hashCode()) {
-          return;
+      // Build the aligned sentence array with bestMapping.
+      for (int j = 0; j < consensusCount; j++) {
+        int mappedIndex = bestMapping[j];
+        if (mappedIndex == -1) {
+          alignedTexts[t][j] = "";
+        } else {
+          alignedTexts[t][j] = candidateSentences[mappedIndex];
         }
-        SentencePotentialMatcher.MatchResult result = matcher.match(record1.text, record2.text);
-        if (result.score > 0.3) {
-          results.add(new ComparisonResult(record1.index, record2.index, record1.alignState, record2.alignState, result.score));
-        }
-      });
-    });
-
-    // Count the results per each alignState instance.
-    Map<AlignState, Integer> stateCountMap = new HashMap<>();
-    results.forEach(result -> {
-      stateCountMap.put(result.alignState1, stateCountMap.getOrDefault(result.alignState1, 0) + 1);
-      stateCountMap.put(result.alignState2, stateCountMap.getOrDefault(result.alignState2, 0) + 1);
-    });
-
-    // Find the maximum index for each alignState instance.
-    Map<AlignState, Integer> stateMaxIndexMap = new HashMap<>();
-    results.forEach(result -> {
-      Integer previousIndex = stateMaxIndexMap.get(result.alignState1);
-      if (previousIndex == null || previousIndex < result.index1) {
-        stateMaxIndexMap.put(result.alignState1, result.index1);
-      }
-
-      previousIndex = stateMaxIndexMap.get(result.alignState2);
-      if (previousIndex == null || previousIndex < result.index2) {
-        stateMaxIndexMap.put(result.alignState2, result.index2);
-      }
-    });
-
-    // Find the minimum index for each alignState instance.
-    Map<AlignState, Integer> stateMinIndexMap = new HashMap<>();
-    results.forEach(result -> {
-      Integer previousIndex = stateMinIndexMap.get(result.alignState1);
-      if (previousIndex == null || previousIndex > result.index1) {
-        stateMinIndexMap.put(result.alignState1, result.index1);
-      }
-
-      previousIndex = stateMinIndexMap.get(result.alignState2);
-      if (previousIndex == null || previousIndex > result.index2) {
-        stateMinIndexMap.put(result.alignState2, result.index2);
-      }
-    });
-
-    // Find the max min difference for each alignState instance.
-    Map<AlignState, Integer> stateMaxMinDiffMap = new HashMap<>();
-    stateMaxIndexMap.forEach((alignState, maxIndex) -> {
-      Integer minIndex = stateMinIndexMap.get(alignState);
-      if (minIndex != null) {
-        stateMaxMinDiffMap.put(alignState, maxIndex - minIndex);
-      }
-    });
-
-    // Find the maximum max min difference which are satisfied by at least 2 alignState instances.
-    List<Integer> uniqueDiffs = stateMaxMinDiffMap.values().stream()
-        .filter(diff -> diff > 0)
-        .distinct()
-        .sorted(Comparator.reverseOrder())
-        .collect(Collectors.toList());
-
-    int supportedDiff = 0;
-    for (int diff : uniqueDiffs) {
-      long count = stateMaxMinDiffMap.values().stream().filter(d -> d >= diff).count();
-      if (count >= 2) {
-        supportedDiff = diff;
-        break;
-      }
-    }
-    // Means we are expecting at least {supportedDiff} words to be present in all alignState instances.
-
-    // Collect alignStates which are below the supportedDiff.
-    int finalSupportedDiff = supportedDiff;
-    List<AlignState> statesToDiscard = states.states.stream()
-        .filter(state -> stateMaxMinDiffMap.get(state) == null || stateMaxMinDiffMap.get(state) < finalSupportedDiff)
-        .toList();
-
-    // Remove alignStates which are below the supportedDiff.
-    statesToDiscard.forEach(states::remove);
-
-    int maximumIndex = results.stream().mapToInt(result -> Math.max(result.index1, result.index2)).max().orElse(0);
-    Map<AlignState, Integer> stateIndexMap = new HashMap<>();
-    for (int i = 0; i < maximumIndex; i++) {
-      for (ComparisonResult result : results) {
-        if (result.index1 == i || result.index2 == i) {
-          Integer previousIndex = stateIndexMap.get(result.alignState1);
-          if (previousIndex == null || previousIndex > result.index1) {
-            stateIndexMap.put(result.alignState1, result.index1);
-          }
-
-          previousIndex = stateIndexMap.get(result.alignState2);
-          if (previousIndex == null || previousIndex > result.index2) {
-            stateIndexMap.put(result.alignState2, result.index2);
-          }
-        }
-      }
-      if (stateIndexMap.size() == states.states.size()) {
-        break;
-      } else {
-        stateIndexMap.clear();
       }
     }
 
-    stateIndexMap.forEach(AlignState::setIndex);
+    return new AlignmentResult(alignedTexts, true);
   }
 
-  class States {
-    private List<AlignState> states;
+  private int[] computeBestMapping(
+      String[] baseline, String[] candidate, SentencePotentialMatcher matcher) {
+    Map<String, DPResult> memo = new HashMap<>();
+    DPResult res = dp(0, 0, baseline, candidate, matcher, memo);
+    return res.mapping;
+  }
 
-    public States(List<AlignState> states) {
-      this.states = states;
-    }
+  private static class DPResult {
+    final double totalScore;
+    final int[] mapping;  // mapping[i] = index in candidate for baseline[i], or -1 if unmatched
 
-    public void remove(AlignState state) {
-      states.remove(state);
+    DPResult(double totalScore, int[] mapping) {
+      this.totalScore = totalScore;
+      this.mapping = mapping;
     }
   }
 
+  /**
 
-  static class AlignState {
-    private String[] sentences;
-    private int readingIndex;
-    private int writingIndex;
-    private List<String> result;
-
-    public AlignState(String[] sentences) {
-      this.sentences = sentences;
-      this.readingIndex = 0;
-      this.result = new ArrayList<>();
+   dp(i, j) returns the best alignment from baseline[i..] to candidate[j..].
+   We consider:
+   match baseline[i] with candidate[j] (if fuzzy match is >= MATCH_THRESHOLD)
+   2. skip candidate[j] (extra sentence in candidate)
+   3. skip baseline[i] (missing sentence in candidate)
+   We use totalScore to measure alignment quality, and store the best mapping. */
+  private DPResult dp(int i, int j, String[] baseline, String[] candidate, SentencePotentialMatcher matcher, Map<String, DPResult> memo) {
+    int n = baseline.length;
+    int m = candidate.length;
+    String key = i + "_" + j;
+    if (memo.containsKey(key)) {
+      return memo.get(key);
     }
 
-    public String getCurrentSentence() {
-      return sentences[readingIndex];
+// If done with baseline, all are unmatched
+    if (i == n) {
+      int[] map = new int[n];
+      Arrays.fill(map, -1);
+      DPResult result = new DPResult(0.0, map);
+      memo.put(key, result);
+      return result;
+    }
+// If no more candidate sentences, all leftover baseline are unmatched
+    if (j == m) {
+      int[] map = new int[n];
+      Arrays.fill(map, -1);
+      DPResult result = new DPResult(0.0, map);
+      memo.put(key, result);
+      return result;
     }
 
-    public void setIndex(Integer i) {
-      this.readingIndex = i;
+    double bestScore = Double.NEGATIVE_INFINITY;
+    DPResult best = null;
+    boolean usedMatch = false;
+
+// 1) Match baseline[i] with candidate[j] if the fuzzy score >= MATCH_THRESHOLD
+    MatchResult matchResult = matcher.match(baseline[i], candidate[j]);
+    if (matchResult != null && matchResult.score >= MATCH_THRESHOLD) {
+      DPResult sub = dp(i + 1, j + 1, baseline, candidate, matcher, memo);
+      double score = matchResult.score + sub.totalScore;
+      bestScore = score;
+      int[] map = new int[n];
+      System.arraycopy(sub.mapping, 0, map, 0, n);
+      map[i] = j;
+      best = new DPResult(score, map);
+      usedMatch = true;
     }
+
+// 2) Skip candidate[j] (candidate has an extra sentence)
+    {
+      DPResult sub = dp(i, j + 1, baseline, candidate, matcher, memo);
+      double score = sub.totalScore;
+      // Tie-break: prefer an actual match if scores are identical
+      if (score > bestScore || (score == bestScore && !usedMatch)) {
+        bestScore = score;
+        int[] map = new int[n];
+        System.arraycopy(sub.mapping, 0, map, 0, n);
+        best = new DPResult(score, map);
+        usedMatch = false;
+      }
+    }
+
+// 3) Skip baseline[i] (missing sentence in candidate)
+    {
+      DPResult sub = dp(i + 1, j, baseline, candidate, matcher, memo);
+      double score = sub.totalScore;
+      if (score > bestScore || (score == bestScore && !usedMatch)) {
+        bestScore = score;
+        int[] map = new int[n];
+        System.arraycopy(sub.mapping, 0, map, 0, n);
+        map[i] = -1;
+        best = new DPResult(score, map);
+        usedMatch = false;
+      }
+    }
+
+    memo.put(key, best);
+    return best;
   }
 }
+

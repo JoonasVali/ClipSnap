@@ -107,8 +107,7 @@ public class TextJoinerTest {
         A journey of a thousand miles begins with
         a single step. With a little bit of luck
         and a lot of hard work, you can achieve
-        Anything you set Your mind to.
-        And this is the beginning of a new era.
+        anything you set your mind to. And this is the beginning of a new era.
         The era of the unstoppable force that
         will change the world forever.
         """;

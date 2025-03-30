@@ -133,6 +133,15 @@ public class SentencePotentialMatcherTest {
   }
 
   @Test
+  public void testHyphenDiff() {
+    String s1 = "This is a sample text!";
+    String s2 = "This is a-sample text!";
+    SentencePotentialMatcher.MatchResult result = matcher.match(s1, s2);
+    assertTrue(result.score > 0.95, "Hyphen difference should result in a high score, got: " + result.score);
+  }
+
+
+  @Test
   public void testSubSentence() {
     String s1 = "While we wait I can't believe you are standing there\nThis is a serious matter.";
     String s2 = "This is a serious matter.";
