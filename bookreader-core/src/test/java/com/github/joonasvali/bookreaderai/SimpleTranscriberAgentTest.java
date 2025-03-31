@@ -57,7 +57,7 @@ public class SimpleTranscriberAgentTest {
   @Test
   public void testMessyText() {
     String value = invokeTest("bears, beets, Five Battlestar Galactica.", "bears, bears, BattlestarGalactica", "..still. bears, four beets, Battle star Galactica");
-    Assertions.assertEquals("bears, beets, Five Battlestar Galactica", value);
+    Assertions.assertEquals("bears, beets, Five Battlestar Galactica.", value);
   }
 
   @Test

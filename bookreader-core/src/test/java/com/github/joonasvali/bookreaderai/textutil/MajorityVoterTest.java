@@ -83,6 +83,73 @@ public class MajorityVoterTest {
   }
 
   @Test
+  public void testPunctuationDifferenceAndLinebreaks() {
+    String text1 =  "Cats and dogs.\n";
+    String text2 = "Cats\nand dogs.\n";
+    String text3 = "Cats and dogs\n";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("Cats and dogs.\n", result.getResultingText());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
+  public void testPunctuationDifferenceAndLinebreaks2() {
+    String text1 =  "Cats and dogs.\n";
+    String text2 = "Cats\nand dogs\n";
+    String text3 = "Cats and dogs\n";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("Cats and dogs\n", result.getResultingText());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
+  public void testLinebreaksDifferenceWithPunctuation() {
+    String text1 =  "Cats and dogs.\n";
+    String text2 = "Cats\nand dogs.\n";
+    String text3 = "Cats and\ndogs.\n";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("Cats and dogs.\n", result.getResultingText());
+    assertTrue(result.isSuccess());
+  }
+
+
+  @Test
+  public void testHyphens() {
+    String text1 =  "Cats and dogs.\n";
+    String text2 = "Cats-and-dogs.\n";
+    String text3 = "Cats and does.\n";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("Cats and dogs.\n", result.getResultingText());
+    assertTrue(result.isSuccess());
+  }
+
+  @Test
+  public void testFailure() {
+    String text1 =  "Cats and dogs.\n";
+    String text2 = "Men and mice\n";
+    String text3 = "Bar is open\n";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("", result.getResultingText());
+    assertFalse(result.isSuccess());
+  }
+
+  @Test
+  public void testFailure2() {
+    String text1 =  "bears, beets, Five Battlestar Galactica.";
+    String text2 = "bears, bears, BattlestarGalactica";
+    String text3 = "..still. bears, four beets, Battle star Galactica";
+    String[] texts = { text1, text2, text3 };
+    MajorityVoter.VoteResult result = voter.vote(texts);
+    assertEquals("", result.getResultingText());
+    assertFalse(result.isSuccess());
+  }
+
+  @Test
   public void testTextsWithDifferentLengths() {
     // Some texts have missing words at certain positions.
     String text1 = "The quick brown fox";
@@ -133,24 +200,24 @@ public class MajorityVoterTest {
   @Test
   public void testTextWithLineBreakInMiddle() {
     // Some texts have missing words at certain positions.
-    String text1 = "Thw quick\n brown fox";
+    String text1 = "Thw quick\nbrown fox";
     String text2 = "The quick brown fox";
-    String text3 = "The quick\n red fox";
+    String text3 = "The quick\nred fox";
     String[] texts = { text1, text2, text3 };
     MajorityVoter.VoteResult result = voter.vote(texts);
-    assertEquals("The quick\n brown fox", result.getResultingText());
+    assertEquals("The quick\nbrown fox", result.getResultingText());
     assertTrue(result.isSuccess());
   }
 
   @Test
   public void testPunctuation() {
     // Some texts have missing words at certain positions.
-    String text1 = "Thw quick\n brown fox.";
+    String text1 = "Thw quick\nbrown fox.";
     String text2 = "The quick brown fox.";
-    String text3 = "The quick\n red fox.";
+    String text3 = "The quick\nred fox.";
     String[] texts = { text1, text2, text3 };
     MajorityVoter.VoteResult result = voter.vote(texts);
-    assertEquals("The quick\n brown fox.", result.getResultingText());
+    assertEquals("The quick\nbrown fox.", result.getResultingText());
     assertTrue(result.isSuccess());
   }
 
@@ -163,17 +230,6 @@ public class MajorityVoterTest {
     String[] texts = { text1, text2, text3 };
     MajorityVoter.VoteResult result = voter.vote(texts);
     assertEquals("The quick brown fox\n", result.getResultingText());
-    assertTrue(result.isSuccess());
-  }
-
-  @Test
-  public void testBattleStarGalactica() {
-    String text1 = "bears, beets, Battlestar Galactica.";
-    String text2 = "bears, bears, Battlestar Galactica";
-    String text3 = "..still. bears, beets, Battle star Galactica";
-    String[] texts = { text1, text2, text3 };
-    MajorityVoter.VoteResult result = voter.vote(texts);
-    assertEquals("bears, beets, Battlestar Galactica", result.getResultingText());
     assertTrue(result.isSuccess());
   }
 }

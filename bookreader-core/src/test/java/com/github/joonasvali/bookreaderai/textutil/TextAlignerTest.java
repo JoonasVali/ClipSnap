@@ -2,6 +2,7 @@ package com.github.joonasvali.bookreaderai.textutil;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.github.joonasvali.bookreaderai.textutil.restoration.MajorityVoter;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextAligner;
 import com.github.joonasvali.bookreaderai.textutil.restoration.TextRestorer;
 import org.junit.jupiter.api.Assertions;
