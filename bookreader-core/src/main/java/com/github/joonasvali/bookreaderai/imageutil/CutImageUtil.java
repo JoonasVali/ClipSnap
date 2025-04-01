@@ -1,7 +1,12 @@
 package com.github.joonasvali.bookreaderai.imageutil;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 public class CutImageUtil {
 
@@ -58,27 +63,140 @@ public class CutImageUtil {
     return result;
   }
 
-  public static BufferedImage[] splitImageIntoSections(BufferedImage image, int verticalPieces, int overlapPx) {
+  // Custom class to hold the result.
+  public static class SplitImageResult {
+    public BufferedImage[] sections;
+    public boolean useBrightOverlay;  // true if overlay is bright (image was determined to be dark)
+
+    public SplitImageResult(BufferedImage[] sections, boolean useBrightOverlay) {
+      this.sections = sections;
+      this.useBrightOverlay = useBrightOverlay;
+    }
+  }
+
+  /**
+   * Splits the image into verticalPieces. Only slices after the first include an overlapping area
+   * of overlapPx pixels at the top, representing an already-processed region.
+   * An overlay (bright or dark) is drawn on that overlap so that the overlap stands out.
+   *
+   * @param image The source image.
+   * @param verticalPieces The number of vertical sections to split the image into.
+   * @param overlapPx The number of pixels for the overlap in slices (only applied to slices after the first).
+   * @param colorTopOverlap If true, the top overlap area will be painted with an overlay.
+   * @return A SplitImageResult containing the split image sections and a flag indicating if a bright overlay was used.
+   */
+  public static SplitImageResult splitImageIntoSections(BufferedImage image, int verticalPieces, int overlapPx, boolean colorTopOverlap) {
     int width = image.getWidth();
     int height = image.getHeight();
 
+    // Automatically decide if we need a bright overlay.
+    double avgBrightness = computeAverageBrightness(image);
+    boolean useBrightOverlay = (avgBrightness < 128); // use bright overlay (white) when image is dark
+
     BufferedImage[] results = new BufferedImage[verticalPieces];
+
     for (int i = 0; i < verticalPieces; i++) {
       int x = 0;
-      int y = i * height / verticalPieces;
-      int h = height / verticalPieces;
-
-      if (i > 0) {
-        y -= overlapPx;
-        h += overlapPx;
-      }
-      if (i < verticalPieces - 1) {
-        h += overlapPx;
+      int y, h;
+      if (i == 0) {   // first slice: no top overlap
+        y = 0;
+        h = height / verticalPieces;
+      } else {  // subsequent slices: include the overlapping region at the top
+        y = i * height / verticalPieces - overlapPx;
+        h = height / verticalPieces + overlapPx;
       }
 
-      results[i] = image.getSubimage(x, y, width, h);
+      // Instead of using getSubimage directly (which returns a shared view),
+      // create an independent copy.
+      BufferedImage subImage = image.getSubimage(x, y, width, h);
+      BufferedImage section = new BufferedImage(width, h, BufferedImage.TYPE_INT_ARGB);
+      Graphics2D gSection = section.createGraphics();
+      gSection.drawImage(subImage, 0, 0, null);
+      gSection.dispose();
+
+      // For slices that contain an overlap region (i>0), paint the top area with overlay.
+      if (i > 0 && colorTopOverlap) {
+        Graphics2D g = section.createGraphics();
+
+        // Choose overlay color based on image brightness.
+        Color overlayColor = useBrightOverlay
+            ? new Color(255, 255, 255, 80)   // semi-transparent white for dark images
+            : new Color(0, 0, 0, 80);        // semi-transparent black for light images
+
+        g.setColor(overlayColor);
+        // Fill the entire overlap region on the top (exactly overlapPx pixels).
+        g.fillRect(0, 0, width, overlapPx);
+
+        // Draw a red separator line at the bottom edge of the overlay.
+        g.setColor(Color.RED);
+        g.drawLine(0, overlapPx - 1, width - 1, overlapPx - 1);
+
+        g.dispose();
+      }
+
+      results[i] = section;
     }
 
-    return results;
+    return new SplitImageResult(results, useBrightOverlay && colorTopOverlap);
   }
+
+  /**
+   * Computes the average brightness of the given image.
+   * For each pixel, brightness is computed as:
+   *    brightness = 0.2126 * R + 0.7152 * G + 0.0722 * B
+   *
+   * @param image The source image.
+   * @return The average brightness (0-255 scale).
+   */
+  private static double computeAverageBrightness(BufferedImage image) {
+    int width = image.getWidth();
+    int height = image.getHeight();
+    long totalPixels = (long) width * height;
+    double sumBrightness = 0;
+
+    // Full pass through the image pixels.
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int rgb = image.getRGB(x, y);
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8)  & 0xFF;
+        int b = rgb & 0xFF;
+
+        double brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        sumBrightness += brightness;
+      }
+    }
+    return sumBrightness / totalPixels;
+  }
+//
+//  // Optionally include a main() method for testing.
+//  public static void main(String[] args) throws InterruptedException, InvocationTargetException, IOException {
+//    // Example of loading an image, splitting it, and then inspecting the result.
+//    // BufferedImage image = ImageIO.read(new File("pathToYourImage"));
+//    // SplitImageResult result = splitImageIntoSections(image, 3, 10, true);
+//    // System.out.println("Use bright overlay? " + result.useBrightOverlay);
+//    // Then save the result sections as needed.
+//
+//    // For testing, we can also use a simple example image.
+//    BufferedImage testImage = ImageIO.read(new File("C:\\Users\\Joonas\\Desktop\\xxx.jpg"));
+//
+//    SplitImageResult result = splitImageIntoSections(testImage, 5, 50, true);
+//    System.out.println("Use bright overlay? " + result.useBrightOverlay);
+//
+//    // show images in a single JFrame:
+//    SwingUtilities.invokeAndWait(() -> {
+//      JFrame frame = new JFrame();
+//      frame.setLayout(new GridLayout(1, 3));
+//      for (BufferedImage section : result.sections) {
+//        frame.add(new JLabel(new ImageIcon(section)));
+//      }
+//      frame.pack();
+//      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//      frame.setVisible(true);
+//    });
+//
+//    // For testing, we can also save the result sections as images.
+//
+//  }
+
 }
