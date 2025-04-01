@@ -35,79 +35,54 @@ public class JoinedTranscriber {
       agents[i] = new SimpleTranscriberAgent(images[i], language, story);
     }
 
+    // This list will hold each transcription's content.
+    List<String> resultsList = new ArrayList<>();
 
-    List<CompletableFuture<ProcessingResult<String>>> futures = new ArrayList<>();
-    for (int i = 0; i < agents.length; i++) {
-      int index = i;
-      CompletableFuture<ProcessingResult<String>> future = agents[i].transcribe();
-      if (progressUpdateUtility != null) {
-        future.thenRun(() -> progressUpdateUtility.setTranscribeTaskComplete(index, true));
-      }
-      futures.add(future);
-    }
-
-    CompletableFuture<Void> allDone = CompletableFuture.allOf(
-        futures.toArray(new CompletableFuture[0])
+    // Start the chain with an initial dummy result.
+    CompletableFuture<ProcessingResult<String>> chain = CompletableFuture.completedFuture(
+        new ProcessingResult<>(null, 0, 0, 0)
     );
 
-    allDone.thenRun(() -> {
-      // All tasks finished. Gather results:
-      List<ProcessingResult<String>> results = futures.stream().map(future -> {
-        try {
-          return future.join();
-        } catch (CompletionException e) {
-          logger.error("Unable to complete transcription", e);
-          return new ProcessingResult<>("Task failed", 0, 0, 0);
-        }
-      }).toList();
+    for (int i = 0; i < agents.length; i++) {
+      final int index = i;
+      // Chain each transcription sequentially.
+      chain = chain.thenCompose(previousResult ->
+          agents[index].transcribe(previousResult.content()).thenApply(result -> {
+            // Save the result's content into the list.
+            resultsList.add(result.content());
+            if (progressUpdateUtility != null) {
+              progressUpdateUtility.setTranscribeTaskComplete(index, true);
+            }
+            // Return the result to be used as input for the next agent.
+            return result;
+          })
+      );
+    }
 
+    // Once all tasks have run sequentially, join the results and send the final callback.
+    chain.thenAccept(finalResult -> {
+      ProcessingResult<String> joinedResult = join(resultsList);
       if (progressUpdateUtility != null) {
         progressUpdateUtility.setFinalTaskComplete();
       }
-
-      List<String> texts = new ArrayList<>();
-      for (ProcessingResult<String> result : results) {
-        logger.debug("Transcription result: {}", result.content());
-        texts.add(result.content());
-      }
-
-      ProcessingResult<String> joinedResult = join(texts);
-
-      callback.accept(new ProcessingResult<>(
-          joinedResult.content(),
-          results.stream().mapToLong(ProcessingResult::promptTokens).sum() + joinedResult.promptTokens(),
-          results.stream().mapToLong(ProcessingResult::completionTokens).sum() + joinedResult.completionTokens(),
-          results.stream().mapToLong(ProcessingResult::totalTokens).sum() + joinedResult.totalTokens()
-      ));
+      callback.accept(joinedResult);
     });
-
   }
-
   private ProcessingResult<String> join(List<String> results) {
     if (results.size() == 1) {
       return new ProcessingResult<>(results.getFirst(), 0, 0, 0);
     }
     logger.debug("Joining {} texts", results.size());
-
-    TextJoiner joiner = new TextJoiner(new TextJoinerAI(language, story));
-    String joinedText = results.getFirst();
     long totalTokens = 0;
     long promptTokens = 0;
     long completionTokens = 0;
 
-    logger.debug("(1/"  + results.size() + ")" + "First text: {}", joinedText);
-    for (int i = 1; i < results.size(); i++) {
-      String indicator = "(" + (i + 1) +"/"  + results.size() + ")";
-      logger.debug(indicator + " Joining with text: {}", results.get(i));
-      ProcessingResult<String> result = joiner.join(joinedText, results.get(i));
-      promptTokens += result.promptTokens();
-      completionTokens += result.completionTokens();
-      totalTokens += result.totalTokens();
-      joinedText = result.content();
-      logger.debug(indicator + "Result after joining: {}", joinedText);
+    StringBuilder stringBuilder = new StringBuilder();
+    for (int i = 0; i < results.size(); i++) {
+      stringBuilder.append("\n").append(results.get(i));
     }
 
-    return new ProcessingResult<>(joinedText, promptTokens, completionTokens, totalTokens);
+    return new ProcessingResult<>(stringBuilder.toString(), promptTokens, completionTokens, totalTokens);
   }
 
   public void setProgressUpdateUtility(ProgressUpdateUtility progressUpdateUtility) {

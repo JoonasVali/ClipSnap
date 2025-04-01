@@ -36,12 +36,12 @@ public class JoinedTranscriberTest {
                      // Stub the transcribe method with the corresponding text.
                      Mockito.doReturn(CompletableFuture.completedFuture(
                          new ProcessingResult<>(texts[count], 0, 0, 0)
-                     )).when(mock).transcribe();
+                     )).when(mock).transcribe(Mockito.anyString());
                    } else {
                      // If more instances are created than texts provided, return an empty result.
                      Mockito.doReturn(CompletableFuture.completedFuture(
                          new ProcessingResult<>("", 0, 0, 0)
-                     )).when(mock).transcribe();
+                     )).when(mock).transcribe(Mockito.anyString());
                    }
                  })) {
 

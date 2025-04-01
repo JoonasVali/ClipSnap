@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,11 +40,17 @@ public class ImageAnalysis {
   }
 
   private static String convertBufferedImageToBase64(BufferedImage image, String format) throws IOException {
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    ImageIO.write(image, format, outputStream);
-    byte[] imageBytes = outputStream.toByteArray();
-    return Base64.getEncoder().encodeToString(imageBytes);
+    try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+      boolean written = ImageIO.write(image, format, outputStream);
+      if (!written) {
+        throw new IOException("No appropriate writer found for format: " + format);
+      }
+      outputStream.flush();
+      byte[] imageBytes = outputStream.toByteArray();
+      return Base64.getEncoder().encodeToString(imageBytes);
+    }
   }
+
 
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {

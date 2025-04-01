@@ -109,7 +109,7 @@ public class CutImageUtil {
       // Instead of using getSubimage directly (which returns a shared view),
       // create an independent copy.
       BufferedImage subImage = image.getSubimage(x, y, width, h);
-      BufferedImage section = new BufferedImage(width, h, BufferedImage.TYPE_INT_ARGB);
+      BufferedImage section = new BufferedImage(width, h, BufferedImage.TYPE_INT_RGB);
       Graphics2D gSection = section.createGraphics();
       gSection.drawImage(subImage, 0, 0, null);
       gSection.dispose();
