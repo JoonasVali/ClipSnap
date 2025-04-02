@@ -16,10 +16,8 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
@@ -45,6 +43,7 @@ public class ImageContentPanel extends JPanel {
   private JButton saveButton;
   private JButton settingsButton;
   private JButton produceFinalResultButton;
+  private JButton transcribeButton;
   private JCheckBox normalizePerspectiveCheckBox;
   private JLabel counterLabel;
 
@@ -122,8 +121,8 @@ public class ImageContentPanel extends JPanel {
     JSpinner zoomLevel = new JSpinner(model);
     saveButton = new JButton("Save");
     settingsButton = new JButton("Settings");
-    JButton askButton = new JButton("Transcribe");
-    askButton.setEnabled(hasAPIKey);
+    transcribeButton = new JButton("Transcribe");
+    transcribeButton.setEnabled(hasAPIKey);
     bar = new JProgressBar();
 
     normalizePerspectiveCheckBox = new JCheckBox("Normalize Perspective", normalizePerspective);
@@ -141,7 +140,7 @@ public class ImageContentPanel extends JPanel {
     topMiddlePanel.add(normalizePerspectiveCheckBox);
     topMiddlePanel.add(new JLabel("Detail level:"));
     topMiddlePanel.add(zoomLevel);
-    topMiddlePanel.add(askButton);
+    topMiddlePanel.add(transcribeButton);
     topMiddlePanel.add(bar);
     topRightPanel.add(saveButton);
 
@@ -189,10 +188,8 @@ public class ImageContentPanel extends JPanel {
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
     saveButton.addActionListener(e -> saveContent());
-    askButton.addActionListener(e -> {
-      askButton.setEnabled(false);
+    transcribeButton.addActionListener(e -> {
       performTranscription((Integer) zoomLevel.getValue());
-      askButton.setEnabled(true);
     });
     produceFinalResultButton.addActionListener(e -> {
       if (promptSaveIfNeeded()) {
@@ -257,6 +254,7 @@ public class ImageContentPanel extends JPanel {
     JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story());
     transcriber.setProgressUpdateUtility(progressUpdateUtility);
 
+    transcribeButton.setEnabled(false);
     executor.execute(() -> {
       try {
         transcriber.transcribeImages(result -> {
@@ -281,12 +279,16 @@ public class ImageContentPanel extends JPanel {
                 textArea.append("\n\n" + text);
               }
             }
-            bar.setValue(0);
           });
         });
       } catch (IOException ex) {
         logger.error("Unable to complete transcription for " + inputFileName, ex);
         throw new RuntimeException(ex);
+      } finally {
+        SwingUtilities.invokeLater(() -> {
+          bar.setValue(0);
+          transcribeButton.setEnabled(true);
+        });
       }
     });
 
