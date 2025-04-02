@@ -9,7 +9,6 @@ import org.mockito.Mockito;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,14 +33,14 @@ public class JoinedTranscriberTest {
                    int count = counter.getAndIncrement();
                    if (count < texts.length) {
                      // Stub the transcribe method with the corresponding text.
-                     Mockito.doReturn(CompletableFuture.completedFuture(
+                     Mockito.doReturn(
                          new ProcessingResult<>(texts[count], 0, 0, 0)
-                     )).when(mock).transcribe();
+                     ).when(mock).transcribe(Mockito.any());
                    } else {
                      // If more instances are created than texts provided, return an empty result.
-                     Mockito.doReturn(CompletableFuture.completedFuture(
+                     Mockito.doReturn(
                          new ProcessingResult<>("", 0, 0, 0)
-                     )).when(mock).transcribe();
+                     ).when(mock).transcribe(Mockito.any());
                    }
                  })) {
 
@@ -67,24 +66,24 @@ public class JoinedTranscriberTest {
     String text1 = """
           Two cats and a dog are playing in the garden.
           The cats are chasing the dog. The dog is running away from the cats.
-          The cats are having fun. The dog is having fun too. Listen afafe
           """;
 
     String text2 = """
           The dog is having fun too. Listen to the birds chirping. This is a beautiful day.
-          The sun is shining. The sky is blue. The clouds are white. The birds are singing.
+          The sun is shining. The sky is blue.
           """;
 
     String text3 = """
-          s.,a. The clouds are white. The birds are singing.
+          The clouds are white. The birds are singing.
           The kids are playing in the park. The parents are watching them. The kids are having fun.
           """;
     // Expected result is the concatenation of the provided texts.
     String expectedResult = """
         Two cats and a dog are playing in the garden.
         The cats are chasing the dog. The dog is running away from the cats.
-        The cats are having fun. The dog is having fun too. Listen to the birds chirping. This is a beautiful day.
-        The sun is shining. The sky is blue. The clouds are white. The birds are singing.
+        The dog is having fun too. Listen to the birds chirping. This is a beautiful day.
+        The sun is shining. The sky is blue.
+        The clouds are white. The birds are singing.
         The kids are playing in the park. The parents are watching them. The kids are having fun.
         """;
 
@@ -98,13 +97,12 @@ public class JoinedTranscriberTest {
     String text1 = """
           Ladybug, ladybug, fly away home.
           The cows are in the meadow. The sheep are in the corn.
-          Where is the little
+          Where is the
           """;
 
     String text2 = """
           little logbook? The birds are in the sky. The fish are in the sea.
-          The bees are in the hive. The ants are in the ground.
-          Yard by yard, life is hard. Inch by inch, life's a cinch.
+          The bees are in the hive.
           """;
 
     String text3 = """
@@ -116,9 +114,10 @@ public class JoinedTranscriberTest {
     String expectedResult = """
         Ladybug, ladybug, fly away home.
         The cows are in the meadow. The sheep are in the corn.
-        Where is the little logbook? The birds are in the sky. The fish are in the sea.
-        The bees are in the hive. The ants are in the ground.
-        Yard by yard, life is hard. Inch by inch, life's a cinch.
+        Where is the
+        little logbook? The birds are in the sky. The fish are in the sea.
+        The bees are in the hive.
+        The ants are in the ground. Yard by yard, life is hard. Inch by inch, life's a cinch.
         Ladybug, ladybug, fly away home. The cows are in the meadow. The sheep are in the corn.
         Where is the little logbook? The birds are in the sky. The fish are in the sea.
         """;

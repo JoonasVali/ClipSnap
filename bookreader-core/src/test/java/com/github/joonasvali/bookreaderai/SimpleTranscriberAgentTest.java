@@ -34,11 +34,9 @@ public class SimpleTranscriberAgentTest {
 
       SimpleTranscriberAgent transcriber = new SimpleTranscriberAgent(image, "english", "story");
 
-      ProcessingResult<String> result = transcriber.transcribe().get();
+      ProcessingResult<String> result = transcriber.transcribe(null);
 
       return result.content();
-    } catch (ExecutionException | InterruptedException e) {
-      throw new RuntimeException(e);
     }
   }
 
