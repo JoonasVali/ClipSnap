@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
 public class SimpleTranscriberAgent {
   private static final Logger logger = LoggerFactory.getLogger(SimpleTranscriberAgent.class);
@@ -38,33 +37,31 @@ public class SimpleTranscriberAgent {
     this.language = language;
   }
 
-  public CompletableFuture<ProcessingResult<String>> transcribe(String previousTranscription) {
+  public ProcessingResult<String> transcribe(String previousTranscription) {
     ImageAnalysis imageAnalysis = createImageAnalysis(previousTranscription);
-    return CompletableFuture.supplyAsync(() -> {
-      try {
-        ProcessingResult<String[]> results = processImage(imageAnalysis);
+    try {
+      ProcessingResult<String[]> results = processImage(imageAnalysis);
 
-        TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
-        ProcessingResult<String> result = verifierAgent.verify(results.content());
+      TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
+      ProcessingResult<String> result = verifierAgent.verify(results.content());
 
-        return new ProcessingResult<>(result.content(),
-            result.promptTokens() + results.promptTokens(),
-            result.completionTokens() + results.completionTokens(),
-            result.totalTokens() + results.totalTokens()
-        );
-      } catch (Exception e) {
-        logger.error("Unable to complete transcription", e);
-        throw new RuntimeException(e);
-      }
-    });
+      return new ProcessingResult<>(result.content(),
+          result.promptTokens() + results.promptTokens(),
+          result.completionTokens() + results.completionTokens(),
+          result.totalTokens() + results.totalTokens()
+      );
+    } catch (Exception e) {
+      logger.error("Unable to complete transcription", e);
+      throw new RuntimeException(e);
+    }
   }
+
 
   private ImageAnalysis createImageAnalysis(String previousTranscription) {
     String prompt = SYSTEM_PROMPT
         .replace("${LANGUAGE}", languageDirection)
         .replace("${STORY}", story) + "\n" + createPromptFromPreviousTranscription(previousTranscription);
 
-    System.out.println(prompt);
     return new ImageAnalysis(prompt);
   }
 
@@ -72,7 +69,8 @@ public class SimpleTranscriberAgent {
     if (previousTranscription == null) {
       return "";
     }
-    return "In this case you are continuing with a next slice of ongoing transcription. Avoid transcribing text that's already transcribed and highlighted on top of the image." +
+    return "In this case you are continuing with a next slice of ongoing transcription. " +
+        "Introduce a line break to the beginning if needed. Avoid transcribing text that's already transcribed and highlighted on top of the image. " +
         "Previous transcription ended with: ..." + getLastSentenceOrMaxOfNWords(previousTranscription);
   }
 

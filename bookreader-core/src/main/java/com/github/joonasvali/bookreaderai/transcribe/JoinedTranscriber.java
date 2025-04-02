@@ -2,8 +2,6 @@ package com.github.joonasvali.bookreaderai.transcribe;
 
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
-import com.github.joonasvali.bookreaderai.textutil.TextJoiner;
-import com.github.joonasvali.bookreaderai.textutil.textjoiner.TextJoinerAI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,8 +9,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 public class JoinedTranscriber {
@@ -28,7 +24,6 @@ public class JoinedTranscriber {
     this.language = language;
     this.story = story;
   }
-
   public void transcribeImages(Consumer<ProcessingResult<String>> callback) throws IOException {
     SimpleTranscriberAgent[] agents = new SimpleTranscriberAgent[images.length];
     for (int i = 0; i < images.length; i++) {
@@ -38,36 +33,30 @@ public class JoinedTranscriber {
     // This list will hold each transcription's content.
     List<String> resultsList = new ArrayList<>();
 
-    // Start the chain with an initial dummy result.
-    CompletableFuture<ProcessingResult<String>> chain = CompletableFuture.completedFuture(
-        new ProcessingResult<>(null, 0, 0, 0)
-    );
+    // Start with an initial dummy result.
+    ProcessingResult<String> previousResult = new ProcessingResult<>(null, 0, 0, 0);
 
     for (int i = 0; i < agents.length; i++) {
-      final int index = i;
-      // Chain each transcription sequentially.
-      chain = chain.thenCompose(previousResult ->
-          agents[index].transcribe(previousResult.content()).thenApply(result -> {
-            // Save the result's content into the list.
-            resultsList.add(result.content());
-            if (progressUpdateUtility != null) {
-              progressUpdateUtility.setTranscribeTaskComplete(index, true);
-            }
-            // Return the result to be used as input for the next agent.
-            return result;
-          })
-      );
+      // Perform each transcription synchronously.
+      ProcessingResult<String> result = agents[i].transcribe(previousResult.content());
+      resultsList.add(result.content());
+
+      if (progressUpdateUtility != null) {
+        progressUpdateUtility.setTranscribeTaskComplete(i, true);
+      }
+
+      // Update previousResult to pass its content to the next agent.
+      previousResult = result;
     }
 
-    // Once all tasks have run sequentially, join the results and send the final callback.
-    chain.thenAccept(finalResult -> {
-      ProcessingResult<String> joinedResult = join(resultsList);
-      if (progressUpdateUtility != null) {
-        progressUpdateUtility.setFinalTaskComplete();
-      }
-      callback.accept(joinedResult);
-    });
+    // Combine the results and send the final callback.
+    ProcessingResult<String> joinedResult = join(resultsList);
+    if (progressUpdateUtility != null) {
+      progressUpdateUtility.setFinalTaskComplete();
+    }
+    callback.accept(joinedResult);
   }
+
   private ProcessingResult<String> join(List<String> results) {
     if (results.size() == 1) {
       return new ProcessingResult<>(results.getFirst(), 0, 0, 0);
@@ -79,7 +68,7 @@ public class JoinedTranscriber {
 
     StringBuilder stringBuilder = new StringBuilder();
     for (int i = 0; i < results.size(); i++) {
-      stringBuilder.append("\n").append(results.get(i));
+      stringBuilder.append(results.get(i));
     }
 
     return new ProcessingResult<>(stringBuilder.toString(), promptTokens, completionTokens, totalTokens);

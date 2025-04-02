@@ -16,7 +16,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
@@ -24,6 +28,8 @@ public class ImageContentPanel extends JPanel {
   public static final int LINE_BREAK_CHARS = 100;
   public static final int DUMMY_PROGRESS = 5;
   public static final int CUT_OVERLAP_PX = 50;
+
+  private final Executor executor = Executors.newSingleThreadExecutor();
 
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(ImageContentPanel.class);
   private static final String PREF_KEY_LAST_IMAGE_INDEX_BASE = "lastImageIndex";
@@ -183,7 +189,11 @@ public class ImageContentPanel extends JPanel {
     prevButton.addActionListener(e -> showPreviousImage());
     nextButton.addActionListener(e -> showNextImage());
     saveButton.addActionListener(e -> saveContent());
-    askButton.addActionListener(e -> performTranscription(zoomLevel));
+    askButton.addActionListener(e -> {
+      askButton.setEnabled(false);
+      performTranscription((Integer) zoomLevel.getValue());
+      askButton.setEnabled(true);
+    });
     produceFinalResultButton.addActionListener(e -> {
       if (promptSaveIfNeeded()) {
         finalResultManager.invokeSaveFinalResultDialog(this);
@@ -220,9 +230,11 @@ public class ImageContentPanel extends JPanel {
     return PREF_KEY_ROTATION_BASE + ":" + outputFolder.toString().hashCode() + ":" + FileHandler.getFileNameWithoutSuffix(paths[currentIndex]).hashCode();
   }
 
-  private void performTranscription(JSpinner zoomLevel) {
+  private void performTranscription(int zoomLevel) {
+
     bar.setValue(DUMMY_PROGRESS);
-    ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility((Integer) zoomLevel.getValue());
+
+    ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
     var points = imagePanel.getOriginalCropCoordinates();
 
     BufferedImage croppedImage = loadedImage;
@@ -236,7 +248,7 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, (Integer) zoomLevel.getValue(), CUT_OVERLAP_PX, true).sections;
+    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, CUT_OVERLAP_PX, true).sections;
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));
@@ -245,36 +257,39 @@ public class ImageContentPanel extends JPanel {
     JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story());
     transcriber.setProgressUpdateUtility(progressUpdateUtility);
 
-    try {
-      transcriber.transcribeImages(result -> {
-        LineUtil lineUtil = new LineUtil();
-        String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
+    executor.execute(() -> {
+      try {
+        transcriber.transcribeImages(result -> {
+          LineUtil lineUtil = new LineUtil();
+          String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
 
-        logger.info("-- Tokens used --");
-        logger.info("Used completion tokens: " + result.completionTokens());
-        logger.info("Used prompt tokens: " + result.promptTokens());
-        logger.info("User total tokens: " + result.totalTokens());
+          logger.info("-- Tokens used --");
+          logger.info("Used completion tokens: " + result.completionTokens());
+          logger.info("Used prompt tokens: " + result.promptTokens());
+          logger.info("User total tokens: " + result.totalTokens());
 
-        if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
-          // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
-          textArea.setText(text);
-        } else {
-          // If user has selected text, replace that selection; otherwise, append the transcription result.
-          String selectedText = textArea.getSelectedText();
-          if (selectedText != null && !selectedText.isEmpty()) {
-            textArea.replaceSelection(text);
-          } else {
-            textArea.append("\n\n" + text);
-          }
-        }
+          SwingUtilities.invokeLater(() -> {
+            if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
+              // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
+              textArea.setText(text);
+            } else {
+              // If user has selected text, replace that selection; otherwise, append the transcription result.
+              String selectedText = textArea.getSelectedText();
+              if (selectedText != null && !selectedText.isEmpty()) {
+                textArea.replaceSelection(text);
+              } else {
+                textArea.append("\n\n" + text);
+              }
+            }
+            bar.setValue(0);
+          });
+        });
+      } catch (IOException ex) {
+        logger.error("Unable to complete transcription for " + inputFileName, ex);
+        throw new RuntimeException(ex);
+      }
+    });
 
-        progressUpdateUtility.removeListener(listener);
-        bar.setValue(0);
-      });
-    } catch (IOException ex) {
-      logger.error("Unable to complete transcription for " + inputFileName, ex);
-      throw new RuntimeException(ex);
-    }
   }
 
   private void loadContent() {
