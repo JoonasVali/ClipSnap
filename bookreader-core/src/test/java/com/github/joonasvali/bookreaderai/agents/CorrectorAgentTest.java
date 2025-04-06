@@ -103,6 +103,39 @@ public class CorrectorAgentTest {
   }
 
   @Test
+  public void testFixEmptyLines() {
+
+    CorrectorAgent agent = createMockedAgent("", "", new String[]{
+        """
+        
+        Hell1o world.
+        
+        This is a test.
+        """,
+    }, new String[]{
+        """
+        
+        Hello world.
+        
+        This is a test.
+        """,
+    });
+
+    Assertions.assertEquals("""
+        
+        Hello world.
+        
+        This is a test.
+        """, agent.correct("""
+        
+        Hell1o world.
+        
+        This is a test.
+        """).content());
+
+  }
+
+  @Test
   public void testSplitSentenceOverThousandCharacters() {
     // Build a 1003-character string: 1000 'A' + 2 'A' + newline = 1003 total
     String chunk1 = repeatChar('A', 1000);

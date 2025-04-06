@@ -47,11 +47,20 @@ public class TextSentenceSplitterTest {
   }
 
   @Test
+  public void testSplitWithRN() {
+    String text1 = "Hello, this is a sample text.\r\n\r\n This is a sample text! How are you?";
+    String[] result = new TextSentenceSplitter().getSentences(text1);
+    Assertions.assertEquals("Hello, this is a sample text.\r\n\r\n", result[0]);
+    Assertions.assertEquals("This is a sample text!", result[1]);
+    Assertions.assertEquals("How are you?", result[2]);
+  }
+
+  @Test
   public void testLineBreaksAndWhiteSpaces() {
     TextSentenceSplitter textSentenceSplitter = new TextSentenceSplitter();
     String text1 = "Hello, this is a sample text.\n This is a \nsample text! How are you?\n";
     String text2 = "Hello, \tthis is a     sampletext.\n This is\n a sample text! How are you?\n";
-    String text3 = "Hello, this is a sample text. This is asample text! How are-ywu?\n";
+    String text3 = "Hello, this is a sample text. This is asample text! How are-ywu?\n\n";
     String[] result0 = textSentenceSplitter.getSentences(text1);
     String[] result1 = textSentenceSplitter.getSentences(text2);
     String[] result2 = textSentenceSplitter.getSentences(text3);
@@ -64,7 +73,7 @@ public class TextSentenceSplitterTest {
     Assertions.assertEquals("This is asample text!", result2[1]);
     Assertions.assertEquals("How are you?\n", result0[2]);
     Assertions.assertEquals("How are you?\n", result1[2]);
-    Assertions.assertEquals("How are-ywu?\n", result2[2]);
+    Assertions.assertEquals("How are-ywu?\n\n", result2[2]);
   }
 
   @Test
