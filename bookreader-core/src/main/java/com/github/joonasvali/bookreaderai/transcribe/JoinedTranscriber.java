@@ -31,7 +31,7 @@ public class JoinedTranscriber {
     }
 
     // This list will hold each transcription's content.
-    List<String> resultsList = new ArrayList<>();
+    List<ProcessingResult<String>> resultsList = new ArrayList<>();
 
     // Start with an initial dummy result.
     ProcessingResult<String> previousResult = new ProcessingResult<>(null, 0, 0, 0);
@@ -39,7 +39,7 @@ public class JoinedTranscriber {
     for (int i = 0; i < agents.length; i++) {
       // Perform each transcription synchronously.
       ProcessingResult<String> result = agents[i].transcribe(previousResult.content());
-      resultsList.add(result.content());
+      resultsList.add(result);
 
       if (progressUpdateUtility != null) {
         progressUpdateUtility.setTranscribeTaskComplete(i, true);
@@ -57,9 +57,9 @@ public class JoinedTranscriber {
     callback.accept(joinedResult);
   }
 
-  private ProcessingResult<String> join(List<String> results) {
+  private ProcessingResult<String> join(List<ProcessingResult<String>> results) {
     if (results.size() == 1) {
-      return new ProcessingResult<>(results.getFirst(), 0, 0, 0);
+      return new ProcessingResult<>(results.getFirst().content(), results.getFirst().promptTokens(), results.getFirst().completionTokens(), results.getFirst().totalTokens());
     }
     logger.debug("Joining {} texts", results.size());
     long totalTokens = 0;
@@ -67,8 +67,11 @@ public class JoinedTranscriber {
     long completionTokens = 0;
 
     StringBuilder stringBuilder = new StringBuilder();
-    for (int i = 0; i < results.size(); i++) {
-      stringBuilder.append(results.get(i));
+    for (ProcessingResult<String> result : results) {
+      stringBuilder.append(result.content());
+      totalTokens += result.totalTokens();
+      promptTokens += result.promptTokens();
+      completionTokens += result.completionTokens();
     }
 
     return new ProcessingResult<>(stringBuilder.toString(), promptTokens, completionTokens, totalTokens);
