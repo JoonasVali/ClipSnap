@@ -29,13 +29,24 @@ public class TextSentenceSplitter {
           i++;
         }
         int j = i + 1;
-        // Advance j while the characters are spaces or tabs.
+        // Skip spaces and tabs after punctuation.
         while (j < n && (text.charAt(j) == ' ' || text.charAt(j) == '\t')) {
           j++;
         }
-        // If the very next character is a newline, include it.
-        if (j < n && text.charAt(j) == '\n') {
-          j++; // include the newline with the sentence.
+        // Include all following newline sequences.
+        while (j < n) {
+          if (text.charAt(j) == '\n') {
+            j++;
+          } else if (text.charAt(j) == '\r') {
+            // Check for Windows-style newline \r\n.
+            if (j + 1 < n && text.charAt(j + 1) == '\n') {
+              j += 2;
+            } else {
+              j++;
+            }
+          } else {
+            break;
+          }
         }
         // Extract the sentence from 'start' to j.
         String sentence = text.substring(start, j);
@@ -44,21 +55,22 @@ public class TextSentenceSplitter {
         i = j - 1; // update i accordingly.
       }
     }
-// Add any remaining text as a sentence.
+    // Add any remaining text as a sentence.
     if (start < n) {
       sentences.add(text.substring(start));
     }
 
-// Post-process each sentence:
-// - Remove leading spaces/tabs from every sentence except the first.
-// - If a sentence does not end with a newline, trim trailing whitespace.
+    // Post-process each sentence:
+    // - Remove leading spaces/tabs from every sentence except the first.
+    // - If a sentence does not end with any newline characters, trim trailing whitespace.
     List<String> result = new ArrayList<>();
     for (int i = 0; i < sentences.size(); i++) {
       String s = sentences.get(i);
       if (i > 0) {
         s = s.replaceFirst("^[ \\t]+", "");
       }
-      if (!s.endsWith("\n")) {
+      // Only trim trailing whitespace if the sentence doesn't end with a newline or a carriage return.
+      if (!s.endsWith("\n") && !s.endsWith("\r")) {
         s = s.replaceAll("[ \\t]+$", "");
       }
       result.add(s);
@@ -66,6 +78,8 @@ public class TextSentenceSplitter {
 
     return result;
   }
+
+
 
   /**
 

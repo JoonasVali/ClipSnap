@@ -136,9 +136,9 @@ public class TextAlignerTest {
     String[] texts = {text1, text2, text3};
     TextAligner.AlignmentResult result = aligner.alignTexts(texts);
 
-    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "Mice and men.", "Bread and butter.", "Cats and dogs.\n" }, result.getAlignedTexts()[0]);
-    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "\nMice and men.\n", "Bread and butter.", "Cats\nand dogs.\n" }, result.getAlignedTexts()[1]);
-    assertArrayEquals(new String[] { "xyz.\n", "\n14.", "august 1941.", "a.\n", "\nMice and men.\n", "Bread and butter.", "Cats and dogs\n" }, result.getAlignedTexts()[2]);
+    assertArrayEquals(new String[] { "xyz.\n\n", "14.", "august 1941.", "a.\n\n", "Mice and men.", "Bread and butter.", "Cats and dogs.\n" }, result.getAlignedTexts()[0]);
+    assertArrayEquals(new String[] { "xyz.\n\n", "14.", "august 1941.", "a.\n\n", "Mice and men.\n", "Bread and butter.", "Cats\nand dogs.\n" }, result.getAlignedTexts()[1]);
+    assertArrayEquals(new String[] { "xyz.\n\n", "14.", "august 1941.", "a.\n\n", "Mice and men.\n", "Bread and butter.", "Cats and dogs\n" }, result.getAlignedTexts()[2]);
   }
 
 }
