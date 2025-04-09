@@ -70,7 +70,7 @@ public class SimpleTranscriberAgent {
       return "";
     }
     return "In this case you are continuing with a next slice of ongoing transcription. " +
-        "Introduce a line break to the beginning if needed. Avoid transcribing text that's already transcribed and highlighted on top of the image. " +
+        "Introduce a line break to the beginning if needed. Avoid transcribing text that's already transcribed and separated by red line on top of the image. " +
         "Previous transcription ended with: ..." + getLastSentenceOrMaxOfNWords(previousTranscription);
   }
 

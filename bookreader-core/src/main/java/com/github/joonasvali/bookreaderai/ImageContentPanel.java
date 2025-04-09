@@ -1,5 +1,6 @@
 package com.github.joonasvali.bookreaderai;
 
+import com.github.joonasvali.bookreaderai.agents.LineCountEvaluator;
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.PerspectiveImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
@@ -25,7 +26,6 @@ import java.util.prefs.Preferences;
 public class ImageContentPanel extends JPanel {
   public static final int LINE_BREAK_CHARS = 100;
   public static final int DUMMY_PROGRESS = 5;
-  public static final int CUT_OVERLAP_PX = 50;
 
   private final Executor executor = Executors.newSingleThreadExecutor();
 
@@ -118,7 +118,6 @@ public class ImageContentPanel extends JPanel {
 
     // Top panel components
     SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
-    JSpinner zoomLevel = new JSpinner(model);
     saveButton = new JButton("Save");
     settingsButton = new JButton("Settings");
     transcribeButton = new JButton("Transcribe");
@@ -139,7 +138,6 @@ public class ImageContentPanel extends JPanel {
 
     topMiddlePanel.add(normalizePerspectiveCheckBox);
     topMiddlePanel.add(new JLabel("Detail level:"));
-    topMiddlePanel.add(zoomLevel);
     topMiddlePanel.add(transcribeButton);
     topMiddlePanel.add(bar);
     topRightPanel.add(saveButton);
@@ -189,7 +187,7 @@ public class ImageContentPanel extends JPanel {
     nextButton.addActionListener(e -> showNextImage());
     saveButton.addActionListener(e -> saveContent());
     transcribeButton.addActionListener(e -> {
-      performTranscription((Integer) zoomLevel.getValue());
+      performTranscription();
     });
     produceFinalResultButton.addActionListener(e -> {
       if (promptSaveIfNeeded()) {
@@ -227,11 +225,10 @@ public class ImageContentPanel extends JPanel {
     return PREF_KEY_ROTATION_BASE + ":" + outputFolder.toString().hashCode() + ":" + FileHandler.getFileNameWithoutSuffix(paths[currentIndex]).hashCode();
   }
 
-  private void performTranscription(int zoomLevel) {
+  private void performTranscription() {
 
     bar.setValue(DUMMY_PROGRESS);
 
-    ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
     var points = imagePanel.getOriginalCropCoordinates();
 
     BufferedImage croppedImage = loadedImage;
@@ -245,7 +242,20 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, CUT_OVERLAP_PX, true).sections;
+    LineCountEvaluator lineCountEvaluator = new LineCountEvaluator();
+
+    int lineCount;
+    try {
+      lineCount = Math.min(Math.max(lineCountEvaluator.countTextLines(croppedImage).content(), 1), 500);
+    } catch (IOException e) {
+      lineCount = 10;
+    }
+    int zoomLevel = (int)Math.ceil(lineCount / 20f);
+    logger.debug("Using zoom level: " + zoomLevel);
+
+    ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
+    int cutOverlapPx = Math.min((int)((croppedImage.getHeight() / (float)lineCount) * 2), croppedImage.getHeight() / 3);
+    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, cutOverlapPx, true).sections;
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));

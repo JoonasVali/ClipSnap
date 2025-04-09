@@ -88,5 +88,4 @@ public class TextSentenceSplitterTest {
     Assertions.assertEquals("This is a sample text!", result[2]);
     Assertions.assertEquals("How are you?", result[3]);
   }
-
 }
