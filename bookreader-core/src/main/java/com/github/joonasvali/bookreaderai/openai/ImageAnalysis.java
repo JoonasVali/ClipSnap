@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /*
@@ -64,7 +65,7 @@ public class ImageAnalysis {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(bufferedImage, "jpg", file.toFile());
+      ImageIO.write(resizedImage, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
@@ -86,6 +87,14 @@ public class ImageAnalysis {
   }
 
   public ProcessingResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
+    if (answers == 1) {
+      ProcessingResult<String> result = process(bufferedImage);
+      return new ProcessingResult<>(new String[]{ result.content() },
+          result.totalTokens(),
+          result.promptTokens(),
+          result.completionTokens()
+      );
+    }
     ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
     BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
 
