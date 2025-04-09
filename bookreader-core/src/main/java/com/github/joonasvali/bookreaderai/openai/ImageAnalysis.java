@@ -95,7 +95,7 @@ public class ImageAnalysis {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(bufferedImage, "jpg", file.toFile());
+      ImageIO.write(resizedImage, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, answers);

@@ -26,7 +26,6 @@ import java.util.prefs.Preferences;
 public class ImageContentPanel extends JPanel {
   public static final int LINE_BREAK_CHARS = 100;
   public static final int DUMMY_PROGRESS = 5;
-  public static final int CUT_OVERLAP_PX = 50;
 
   private final Executor executor = Executors.newSingleThreadExecutor();
 
@@ -255,7 +254,8 @@ public class ImageContentPanel extends JPanel {
     logger.debug("Using zoom level: " + zoomLevel);
 
     ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
-    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, CUT_OVERLAP_PX, true).sections;
+    int cutOverlapPx = Math.min((int)((croppedImage.getHeight() / (float)lineCount) * 2), croppedImage.getHeight() / 3);
+    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, cutOverlapPx, true).sections;
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));
