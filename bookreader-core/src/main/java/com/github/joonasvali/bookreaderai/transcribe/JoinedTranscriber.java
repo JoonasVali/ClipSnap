@@ -53,8 +53,6 @@ public class JoinedTranscriber {
     }
 
     // Combine the results and send the final callback.
-
-    // AGENT
     ContentJoiner contentJoiner = new ContentJoiner(language, story);
 
     ProcessingResult<String> contentJoinerResult = contentJoiner.process(approximatedContent, resultsList.stream().map(ProcessingResult::content).toArray(String[]::new));

@@ -1,14 +1,17 @@
 package com.github.joonasvali.bookreaderai.textutil;
 
+import com.github.joonasvali.bookreaderai.agents.ContentJoiner;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,15 +22,16 @@ public class JoinedTranscriberTest {
    * Invokes the transcribeImages method on JoinedTranscriber.
    * Each created SimpleTranscriberAgent instance will return the corresponding text from the texts array.
    *
+   * @param approx the approximated content to be used in the test
    * @param texts variable number of transcription texts to be returned
    * @return the concatenated transcription result
    * @throws IOException if transcribeImages throws one
    */
-  public String invokeTest(String... texts) throws IOException {
+  public String invokeTest(String approx, String... texts) throws IOException {
     // Use an AtomicInteger to count the constructed SimpleTranscriberAgent instances.
     AtomicInteger counter = new AtomicInteger(0);
 
-    try (MockedConstruction<SimpleTranscriberAgent> mocked =
+    try (MockedConstruction<SimpleTranscriberAgent> mockedSimple =
              Mockito.mockConstruction(SimpleTranscriberAgent.class,
                  (mock, context) -> {
                    int count = counter.getAndIncrement();
@@ -42,7 +46,19 @@ public class JoinedTranscriberTest {
                          new ProcessingResult<>("", 0, 0, 0)
                      ).when(mock).transcribe(Mockito.any());
                    }
-                 })) {
+                 });
+         MockedConstruction<ContentJoiner> mockedContentJoiner =
+             Mockito.mockConstruction(ContentJoiner.class,
+                 (mock, context) -> {
+                   Mockito.doAnswer(invocation -> {
+                     Object firstArg = invocation.getArgument(0);
+                     Object secondArg = invocation.getArgument(1);
+                     Assertions.assertEquals(Arrays.toString(texts), Arrays.toString((String[])secondArg));
+                     return new ProcessingResult<>(firstArg, 0, 0, 0);
+                   }).when(mock).process(Mockito.any(), Mockito.any());
+                 });
+
+    ) {
 
       // Create an array of images with a length equal to the number of texts.
       BufferedImage[] images = new BufferedImage[texts.length];
@@ -51,7 +67,7 @@ public class JoinedTranscriberTest {
       }
 
       // Instantiate JoinedTranscriber with the created images.
-      JoinedTranscriber transcriber = new JoinedTranscriber(images, "english", "story" , ""); // TODO
+      JoinedTranscriber transcriber = new JoinedTranscriber(images, "english", "story" , approx);
 
       final StringBuilder result = new StringBuilder();
       // Assume transcribeImages collects the output via the provided Consumer.
@@ -87,7 +103,7 @@ public class JoinedTranscriberTest {
         The kids are playing in the park. The parents are watching them. The kids are having fun.
         """;
 
-    String result = invokeTest(text1, text2, text3);
+    String result = invokeTest(expectedResult, text1, text2, text3);
     assertEquals(expectedResult, result);
   }
 
@@ -122,7 +138,7 @@ public class JoinedTranscriberTest {
         Where is the little logbook? The birds are in the sky. The fish are in the sea.
         """;
 
-    String result = invokeTest(text1, text2, text3);
+    String result = invokeTest(expectedResult, text1, text2, text3);
     assertEquals(expectedResult, result);
   }
 }
