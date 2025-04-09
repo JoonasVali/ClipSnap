@@ -1,11 +1,12 @@
 package com.github.joonasvali.bookreaderai;
 
-import com.github.joonasvali.bookreaderai.agents.LineCountEvaluator;
 import com.github.joonasvali.bookreaderai.imageutil.CutImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.PerspectiveImageUtil;
 import com.github.joonasvali.bookreaderai.imageutil.RotateImageUtil;
+import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.LineUtil;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
+import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
 import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
@@ -242,31 +243,29 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    LineCountEvaluator lineCountEvaluator = new LineCountEvaluator();
-
-    int lineCount;
-    try {
-      lineCount = Math.min(Math.max(lineCountEvaluator.countTextLines(croppedImage).content(), 1), 500);
-    } catch (IOException e) {
-      lineCount = 10;
-    }
-    int zoomLevel = (int)Math.ceil(lineCount / 20f);
+    int zoomLevel = Math.max(1, (int)Math.floor(croppedImage.getHeight() / 800f));
     logger.debug("Using zoom level: " + zoomLevel);
 
     ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
-    int cutOverlapPx = Math.min((int)((croppedImage.getHeight() / (float)lineCount) * 2), croppedImage.getHeight() / 3);
+    int cutOverlapPx = (croppedImage.getHeight() / (zoomLevel * 6));
     BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, cutOverlapPx, true).sections;
 
     Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
         bar.setValue((int) (progress * 100)));
     progressUpdateUtility.setListener(listener);
 
-    JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story());
-    transcriber.setProgressUpdateUtility(progressUpdateUtility);
+
+    SimpleTranscriberAgent approximationAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1);
 
     transcribeButton.setEnabled(false);
     executor.execute(() -> {
       try {
+        ProcessingResult<String> approx = approximationAgent.transcribe(null);
+        SwingUtilities.invokeLater(() -> bar.setValue(DUMMY_PROGRESS + 5));
+        logger.info("Approximated result: " + approx.content());
+
+        JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story(), approx.content());
+        transcriber.setProgressUpdateUtility(progressUpdateUtility);
         transcriber.transcribeImages(result -> {
           LineUtil lineUtil = new LineUtil();
           String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);

@@ -16,17 +16,17 @@ public class SimpleTranscriberAgent {
         You are a professional Transcriber. Transcribe image and give the text back without explanation.
         ${LANGUAGE}Make your best judgement to detect the words in the picture if they
         are damaged. You are smart and can detect missing pieces from context as well.
-        ${STORY}Avoid adding asterisks or format unless they are part of the text. Only output the
-        transcribed text, nothing else. Remember, do not write explanations or meta comments.
+        ${STORY}Avoid adding asterisks or format unless they are part of the text, but keep the linebreaks in the text! 
+        Only output the transcribed text, nothing else. Remember, do not write explanations or meta comments.
       """;
 
   private final String languageDirection;
   private final BufferedImage bufferedImage;
   private final String story;
   private final String language;
+  private final int samples;
 
-
-  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
+  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, int samples) {
     this.bufferedImage = bufferedImage;
     if (language != null) {
       this.languageDirection = "The content is in " + language + " mostly.";
@@ -35,6 +35,11 @@ public class SimpleTranscriberAgent {
     }
     this.story = story + " ";
     this.language = language;
+    this.samples = samples;
+  }
+
+  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
+    this(bufferedImage, language, story, 3);
   }
 
   public ProcessingResult<String> transcribe(String previousTranscription) {
@@ -42,8 +47,13 @@ public class SimpleTranscriberAgent {
     try {
       ProcessingResult<String[]> results = processImage(imageAnalysis);
 
-      TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
-      ProcessingResult<String> result = verifierAgent.verify(results.content());
+      ProcessingResult<String> result;
+      if (results.content().length > 1) {
+        TranscriptionVerifierAgent verifierAgent = new TranscriptionVerifierAgent(language, story);
+        result = verifierAgent.verify(results.content());
+      } else {
+        result = new ProcessingResult<>(results.content()[0], 0, 0, 0);
+      }
 
       return new ProcessingResult<>(result.content(),
           result.promptTokens() + results.promptTokens(),
@@ -102,6 +112,6 @@ public class SimpleTranscriberAgent {
   }
 
   private ProcessingResult<String[]> processImage(ImageAnalysis imageAnalysis) throws IOException {
-    return imageAnalysis.process(bufferedImage, 3);
+    return imageAnalysis.process(bufferedImage, samples);
   }
 }

@@ -1,6 +1,7 @@
 package com.github.joonasvali.bookreaderai.transcribe;
 
 import com.github.joonasvali.bookreaderai.ProgressUpdateUtility;
+import com.github.joonasvali.bookreaderai.agents.ContentJoiner;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,13 @@ public class JoinedTranscriber {
   private final String language;
   private final String story;
   private ProgressUpdateUtility progressUpdateUtility;
+  private final String approximatedContent;
 
-  public JoinedTranscriber(BufferedImage[] images, String language, String story) {
+  public JoinedTranscriber(BufferedImage[] images, String language, String story, String approximatedContent) {
     this.images = images;
     this.language = language;
     this.story = story;
+    this.approximatedContent = approximatedContent;
   }
   public void transcribeImages(Consumer<ProcessingResult<String>> callback) throws IOException {
     SimpleTranscriberAgent[] agents = new SimpleTranscriberAgent[images.length];
@@ -50,31 +53,30 @@ public class JoinedTranscriber {
     }
 
     // Combine the results and send the final callback.
-    ProcessingResult<String> joinedResult = join(resultsList);
+    ContentJoiner contentJoiner = new ContentJoiner(language, story);
+
+    ProcessingResult<String> contentJoinerResult = contentJoiner.process(approximatedContent, resultsList.stream().map(ProcessingResult::content).toArray(String[]::new));
+
     if (progressUpdateUtility != null) {
       progressUpdateUtility.setFinalTaskComplete();
     }
-    callback.accept(joinedResult);
-  }
 
-  private ProcessingResult<String> join(List<ProcessingResult<String>> results) {
-    if (results.size() == 1) {
-      return new ProcessingResult<>(results.getFirst().content(), results.getFirst().promptTokens(), results.getFirst().completionTokens(), results.getFirst().totalTokens());
-    }
-    logger.debug("Joining {} texts", results.size());
     long totalTokens = 0;
     long promptTokens = 0;
     long completionTokens = 0;
 
-    StringBuilder stringBuilder = new StringBuilder();
-    for (ProcessingResult<String> result : results) {
-      stringBuilder.append(result.content());
+    for (ProcessingResult<String> result : resultsList) {
       totalTokens += result.totalTokens();
       promptTokens += result.promptTokens();
       completionTokens += result.completionTokens();
     }
 
-    return new ProcessingResult<>(stringBuilder.toString(), promptTokens, completionTokens, totalTokens);
+    callback.accept(new ProcessingResult<>(
+        contentJoinerResult.content(),
+        totalTokens + contentJoinerResult.promptTokens(),
+        promptTokens + contentJoinerResult.completionTokens(),
+        completionTokens + contentJoinerResult.totalTokens()
+    ));
   }
 
   public void setProgressUpdateUtility(ProgressUpdateUtility progressUpdateUtility) {
