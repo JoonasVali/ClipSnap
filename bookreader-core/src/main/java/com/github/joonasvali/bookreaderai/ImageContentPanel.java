@@ -138,7 +138,6 @@ public class ImageContentPanel extends JPanel {
     rotateButton.addActionListener(e -> rotateImage());
 
     topMiddlePanel.add(normalizePerspectiveCheckBox);
-    topMiddlePanel.add(new JLabel("Detail level:"));
     topMiddlePanel.add(transcribeButton);
     topMiddlePanel.add(bar);
     topRightPanel.add(saveButton);
