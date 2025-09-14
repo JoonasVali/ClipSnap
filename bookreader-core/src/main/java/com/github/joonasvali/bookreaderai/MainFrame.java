@@ -39,7 +39,8 @@ public class MainFrame extends JFrame {
     settingsPanel = new SettingsPanel(
         new TranscriptionHints(
             properties.getProperty("default.hint.language"),
-            properties.getProperty("default.hint.story")
+            properties.getProperty("default.hint.story"),
+            "GPT-4o"
         ), (Path selectedFolder) -> {
       try {
         // List and sort image files from the selected folder
@@ -48,7 +49,8 @@ public class MainFrame extends JFrame {
         Path outputFolder = selectedFolder.resolve(TRANSCRIPTION_OUTPUT_FOLDER);
         TranscriptionHints hints = new TranscriptionHints(
             settingsPanel.getLanguage().trim().isEmpty() ? null : settingsPanel.getLanguage(),
-            settingsPanel.getStory()
+            settingsPanel.getStory(),
+            settingsPanel.getGptModel()
         );
         // Create a new image panel
         ImageContentPanel imagePanel = new ImageContentPanel(hints, imagePaths, outputFolder, this::switchPanelToSettingPanel);

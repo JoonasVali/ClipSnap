@@ -118,7 +118,6 @@ public class ImageContentPanel extends JPanel {
     bottomPanel.add(bottomRightPanel, BorderLayout.EAST);
 
     // Top panel components
-    SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
     saveButton = new JButton("Save");
     settingsButton = new JButton("Settings");
     transcribeButton = new JButton("Transcribe");
@@ -254,7 +253,7 @@ public class ImageContentPanel extends JPanel {
     progressUpdateUtility.setListener(listener);
 
 
-    SimpleTranscriberAgent approximationAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1);
+    SimpleTranscriberAgent approximationAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1, hints.gptModel());
 
     transcribeButton.setEnabled(false);
     executor.execute(() -> {
@@ -263,7 +262,7 @@ public class ImageContentPanel extends JPanel {
         SwingUtilities.invokeLater(() -> bar.setValue(DUMMY_PROGRESS + 5));
         logger.info("Approximated result: " + approx.content());
 
-        JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story(), approx.content());
+        JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story(), approx.content(), hints.gptModel());
         transcriber.setProgressUpdateUtility(progressUpdateUtility);
         transcriber.transcribeImages(result -> {
           LineUtil lineUtil = new LineUtil();

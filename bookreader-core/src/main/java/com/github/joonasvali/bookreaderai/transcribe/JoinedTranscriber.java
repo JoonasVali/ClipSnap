@@ -18,19 +18,21 @@ public class JoinedTranscriber {
   private final BufferedImage[] images;
   private final String language;
   private final String story;
+  private final String gptModel;
   private ProgressUpdateUtility progressUpdateUtility;
   private final String approximatedContent;
 
-  public JoinedTranscriber(BufferedImage[] images, String language, String story, String approximatedContent) {
+  public JoinedTranscriber(BufferedImage[] images, String language, String story, String approximatedContent, String gptModel) {
     this.images = images;
     this.language = language;
     this.story = story;
     this.approximatedContent = approximatedContent;
+    this.gptModel = gptModel;
   }
   public void transcribeImages(Consumer<ProcessingResult<String>> callback) throws IOException {
     SimpleTranscriberAgent[] agents = new SimpleTranscriberAgent[images.length];
     for (int i = 0; i < images.length; i++) {
-      agents[i] = new SimpleTranscriberAgent(images[i], language, story);
+      agents[i] = new SimpleTranscriberAgent(images[i], language, story, 3, gptModel);
     }
 
     // This list will hold each transcription's content.

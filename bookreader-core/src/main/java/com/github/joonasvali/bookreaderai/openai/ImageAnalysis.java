@@ -13,13 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Base64;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /*
@@ -36,8 +34,16 @@ public class ImageAnalysis {
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
   private final String prompt;
+  private final String model;
+  
   public ImageAnalysis(String prompt) {
     this.prompt = prompt;
+    this.model = "chatgpt-4o-latest";
+  }
+  
+  public ImageAnalysis(String prompt, String model) {
+    this.prompt = prompt;
+    this.model = model;
   }
 
   private static String convertBufferedImageToBase64(BufferedImage image, String format) throws IOException {
@@ -136,9 +142,21 @@ public class ImageAnalysis {
 
   public JSONObject createJsonPayload(String base64Image, int n) {
     JSONObject jsonBody = new JSONObject();
-    jsonBody.put("model", "chatgpt-4o-latest");
+    
+    // Map UI model names to API model names
+    String apiModel;
+    int actualN;
+    if ("GPT-5".equals(model)) {
+      apiModel = "gpt-5";
+      actualN = 1; // GPT-5 should always use n=1
+    } else {
+      apiModel = "chatgpt-4o-latest";
+      actualN = n; // GPT-4o can use the provided n value
+    }
+    
+    jsonBody.put("model", apiModel);
     jsonBody.put("max_tokens", 10000);
-    jsonBody.put("n", n);
+    jsonBody.put("n", actualN);
 
     JSONArray messages = new JSONArray();
 

@@ -25,8 +25,9 @@ public class SimpleTranscriberAgent {
   private final String story;
   private final String language;
   private final int samples;
+  private final String gptModel;
 
-  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, int samples) {
+  public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story, int samples, String gptModel) {
     this.bufferedImage = bufferedImage;
     if (language != null) {
       this.languageDirection = "The content is in " + language + " mostly.";
@@ -36,10 +37,11 @@ public class SimpleTranscriberAgent {
     this.story = story + " ";
     this.language = language;
     this.samples = samples;
+    this.gptModel = gptModel;
   }
 
   public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
-    this(bufferedImage, language, story, 3);
+    this(bufferedImage, language, story, 3, "GPT-4o");
   }
 
   public ProcessingResult<String> transcribe(String previousTranscription) {
@@ -72,7 +74,7 @@ public class SimpleTranscriberAgent {
         .replace("${LANGUAGE}", languageDirection)
         .replace("${STORY}", story) + "\n" + createPromptFromPreviousTranscription(previousTranscription);
 
-    return new ImageAnalysis(prompt);
+    return new ImageAnalysis(prompt, gptModel);
   }
 
   private String createPromptFromPreviousTranscription(String previousTranscription) {

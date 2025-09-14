@@ -67,7 +67,7 @@ public class JoinedTranscriberTest {
       }
 
       // Instantiate JoinedTranscriber with the created images.
-      JoinedTranscriber transcriber = new JoinedTranscriber(images, "english", "story" , approx);
+      JoinedTranscriber transcriber = new JoinedTranscriber(images, "english", "story" , approx, "GPT-4o");
 
       final StringBuilder result = new StringBuilder();
       // Assume transcribeImages collects the output via the provided Consumer.
