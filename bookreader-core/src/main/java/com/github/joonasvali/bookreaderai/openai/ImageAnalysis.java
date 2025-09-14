@@ -2,6 +2,7 @@ package com.github.joonasvali.bookreaderai.openai;
 
 import com.github.joonasvali.bookreaderai.Constants;
 import com.github.joonasvali.bookreaderai.imageutil.ImageResizer;
+import com.github.joonasvali.bookreaderai.util.ModelUtils;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -13,13 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Base64;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /*
@@ -36,8 +35,16 @@ public class ImageAnalysis {
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
   private final String prompt;
+  private final String model;
+  
   public ImageAnalysis(String prompt) {
     this.prompt = prompt;
+    this.model = "chatgpt-4o-latest";
+  }
+  
+  public ImageAnalysis(String prompt, String model) {
+    this.prompt = prompt;
+    this.model = model;
   }
 
   private static String convertBufferedImageToBase64(BufferedImage image, String format) throws IOException {
@@ -56,16 +63,24 @@ public class ImageAnalysis {
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
 
-    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
-    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+    BufferedImage imageToProcess;
+    
+    // For models that require whole image processing, don't scale the image down
+    if (ModelUtils.requiresWholeImageProcessing(model)) {
+      logger.info("Using {}: processing image without scaling", model);
+      imageToProcess = bufferedImage;
+    } else {
+      ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+      imageToProcess = imageResizer.resizeImageToLimits(bufferedImage);
+    }
 
-    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
+    String base64Image = convertBufferedImageToBase64(imageToProcess, "jpg");
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(resizedImage, "jpg", file.toFile());
+      ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
@@ -95,16 +110,25 @@ public class ImageAnalysis {
           result.completionTokens()
       );
     }
-    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
-    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+    
+    BufferedImage imageToProcess;
+    
+    // For models that require whole image processing, don't scale the image down
+    if (ModelUtils.requiresWholeImageProcessing(model)) {
+      logger.info("Using {}: processing image without scaling", model);
+      imageToProcess = bufferedImage;
+    } else {
+      ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+      imageToProcess = imageResizer.resizeImageToLimits(bufferedImage);
+    }
 
-    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
+    String base64Image = convertBufferedImageToBase64(imageToProcess, "jpg");
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(resizedImage, "jpg", file.toFile());
+      ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
@@ -136,8 +160,17 @@ public class ImageAnalysis {
 
   public JSONObject createJsonPayload(String base64Image, int n) {
     JSONObject jsonBody = new JSONObject();
-    jsonBody.put("model", "chatgpt-4o-latest");
-    jsonBody.put("max_tokens", 10000);
+    
+    // Map UI model names to API model names
+    String apiModel;
+    if (ModelUtils.isGPT5Family(model)) {
+      apiModel = "gpt-5";
+    } else {
+      apiModel = "chatgpt-4o-latest";
+      jsonBody.put("max_tokens", 10000);
+    }
+
+    jsonBody.put("model", apiModel);
     jsonBody.put("n", n);
 
     JSONArray messages = new JSONArray();
@@ -166,9 +199,9 @@ public class ImageAnalysis {
 
   public static String sendRequestToOpenAI(JSONObject jsonBody, int retry) throws IOException {
     OkHttpClient client = new OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .connectTimeout(1200, TimeUnit.SECONDS)
+        .writeTimeout(1200, TimeUnit.SECONDS)
+        .readTimeout(1200, TimeUnit.SECONDS)
         .build();
 
     RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json"));

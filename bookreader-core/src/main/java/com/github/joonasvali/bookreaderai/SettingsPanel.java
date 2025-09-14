@@ -19,6 +19,7 @@ public class SettingsPanel extends JPanel {
 
   public static final String LANGUAGE_KEY = "language";
   public static final String STORY_KEY = "story";
+  public static final String GPT_MODEL_KEY = "gptModel";
 
   private JLabel apiKeyStatusLabel;
   private JTextField folderPathField;
@@ -31,6 +32,7 @@ public class SettingsPanel extends JPanel {
   // New fields
   private JTextField languageField;
   private JTextField storyField;
+  private JComboBox<String> gptModelComboBox;
 
   private Preferences preferences;
   private final Consumer<Path> continueAction;
@@ -70,10 +72,13 @@ public class SettingsPanel extends JPanel {
   }
 
   /**
-   * Creates the top panel containing the API key status.
+   * Creates the top panel containing the API key status and GPT model selection.
    */
   private JPanel createApiKeyPanel() {
-    JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JPanel panel = new JPanel(new BorderLayout());
+    
+    // Left side: API Key Status
+    JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     String openaiApiKey = System.getenv(Constants.OPENAI_API_KEY_ENV_VARIABLE);
     if (openaiApiKey == null || openaiApiKey.isEmpty()) {
       logger.warn(Constants.OPENAI_API_KEY_ENV_VARIABLE + " not found.");
@@ -84,7 +89,23 @@ public class SettingsPanel extends JPanel {
       apiKeyStatusLabel = new JLabel(Constants.OPENAI_API_KEY_ENV_VARIABLE + " loaded successfully.");
       apiKeyStatusLabel.setForeground(Color.BLACK);
     }
-    panel.add(apiKeyStatusLabel);
+    leftPanel.add(apiKeyStatusLabel);
+    
+    // Right side: GPT Model Selection
+    JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JLabel modelLabel = new JLabel("GPT Model:");
+    rightPanel.add(modelLabel);
+    
+    String[] models = {"GPT-4o", "GPT-5"};
+    gptModelComboBox = new JComboBox<>(models);
+    gptModelComboBox.setSelectedItem(preferences.get(GPT_MODEL_KEY, "GPT-4o"));
+    gptModelComboBox.addActionListener(e -> {
+      preferences.put(GPT_MODEL_KEY, (String) gptModelComboBox.getSelectedItem());
+    });
+    rightPanel.add(gptModelComboBox);
+    
+    panel.add(leftPanel, BorderLayout.WEST);
+    panel.add(rightPanel, BorderLayout.EAST);
     return panel;
   }
 
@@ -262,6 +283,10 @@ public class SettingsPanel extends JPanel {
 
   public String getStory() {
     return storyField.getText();
+  }
+
+  public String getGptModel() {
+    return (String) gptModelComboBox.getSelectedItem();
   }
 
   /**

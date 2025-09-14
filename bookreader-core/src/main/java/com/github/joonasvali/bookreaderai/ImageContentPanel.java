@@ -7,6 +7,7 @@ import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.LineUtil;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
+import com.github.joonasvali.bookreaderai.util.ModelUtils;
 import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
@@ -118,7 +119,6 @@ public class ImageContentPanel extends JPanel {
     bottomPanel.add(bottomRightPanel, BorderLayout.EAST);
 
     // Top panel components
-    SpinnerModel model = new SpinnerNumberModel(3, 1, 8, 1);
     saveButton = new JButton("Save");
     settingsButton = new JButton("Settings");
     transcribeButton = new JButton("Transcribe");
@@ -242,30 +242,21 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    int zoomLevel = Math.max(1, (int)Math.floor(croppedImage.getHeight() / 800f));
-    logger.debug("Using zoom level: " + zoomLevel);
-
-    ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
-    int cutOverlapPx = (croppedImage.getHeight() / (zoomLevel * 6));
-    BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, cutOverlapPx, true).sections;
-
-    Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
-        bar.setValue((int) (progress * 100)));
-    progressUpdateUtility.setListener(listener);
-
-
-    SimpleTranscriberAgent approximationAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1);
-
-    transcribeButton.setEnabled(false);
-    executor.execute(() -> {
-      try {
-        ProcessingResult<String> approx = approximationAgent.transcribe(null);
-        SwingUtilities.invokeLater(() -> bar.setValue(DUMMY_PROGRESS + 5));
-        logger.info("Approximated result: " + approx.content());
-
-        JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story(), approx.content());
-        transcriber.setProgressUpdateUtility(progressUpdateUtility);
-        transcriber.transcribeImages(result -> {
+    // Check if the model requires whole image processing
+    boolean requiresWholeImageProcessing = ModelUtils.requiresWholeImageProcessing(hints.gptModel());
+    
+    if (requiresWholeImageProcessing) {
+      // For models that require whole image processing: process without slicing or scaling
+      logger.info("Using {}: processing whole image without slicing", hints.gptModel());
+      
+      SimpleTranscriberAgent transcriberAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1, hints.gptModel());
+      
+      transcribeButton.setEnabled(false);
+      executor.execute(() -> {
+        try {
+          ProcessingResult<String> result = transcriberAgent.transcribe(null);
+          SwingUtilities.invokeLater(() -> bar.setValue(100));
+          
           LineUtil lineUtil = new LineUtil();
           String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
 
@@ -288,17 +279,75 @@ public class ImageContentPanel extends JPanel {
               }
             }
           });
-        });
-      } catch (IOException ex) {
-        logger.error("Unable to complete transcription for " + inputFileName, ex);
-        throw new RuntimeException(ex);
-      } finally {
-        SwingUtilities.invokeLater(() -> {
-          bar.setValue(0);
-          transcribeButton.setEnabled(true);
-        });
-      }
-    });
+        } catch (RuntimeException ex) {
+          logger.error("Unable to complete transcription for " + inputFileName, ex);
+          throw ex;
+        } finally {
+          SwingUtilities.invokeLater(() -> {
+            bar.setValue(0);
+            transcribeButton.setEnabled(true);
+          });
+        }
+      });
+    } else {
+      // For other models: use the original slicing approach
+      int zoomLevel = Math.max(1, (int)Math.floor(croppedImage.getHeight() / 800f));
+      logger.debug("Using zoom level: " + zoomLevel);
+
+      ProgressUpdateUtility progressUpdateUtility = new ProgressUpdateUtility(zoomLevel);
+      int cutOverlapPx = (croppedImage.getHeight() / (zoomLevel * 6));
+      BufferedImage[] images = CutImageUtil.splitImageIntoSections(croppedImage, zoomLevel, cutOverlapPx, true).sections;
+
+      Consumer<Float> listener = progress -> SwingUtilities.invokeLater(() ->
+          bar.setValue((int) (progress * 100)));
+      progressUpdateUtility.setListener(listener);
+
+      SimpleTranscriberAgent approximationAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1, hints.gptModel());
+
+      transcribeButton.setEnabled(false);
+      executor.execute(() -> {
+        try {
+          ProcessingResult<String> approx = approximationAgent.transcribe(null);
+          SwingUtilities.invokeLater(() -> bar.setValue(DUMMY_PROGRESS + 5));
+          logger.info("Approximated result: " + approx.content());
+
+          JoinedTranscriber transcriber = new JoinedTranscriber(images, hints.language(), hints.story(), approx.content(), hints.gptModel());
+          transcriber.setProgressUpdateUtility(progressUpdateUtility);
+          transcriber.transcribeImages(result -> {
+            LineUtil lineUtil = new LineUtil();
+            String text = lineUtil.lineBreakAfterEvery(result.content(), LINE_BREAK_CHARS);
+
+            logger.info("-- Tokens used --");
+            logger.info("Used completion tokens: " + result.completionTokens());
+            logger.info("Used prompt tokens: " + result.promptTokens());
+            logger.info("User total tokens: " + result.totalTokens());
+
+            SwingUtilities.invokeLater(() -> {
+              if (PerspectiveImageUtil.arePointsAtTheCornersOfImage(loadedImage, points)) {
+                // When the image is not cropped, the text is transcribed from the original image, overwrite existing text.
+                textArea.setText(text);
+              } else {
+                // If user has selected text, replace that selection; otherwise, append the transcription result.
+                String selectedText = textArea.getSelectedText();
+                if (selectedText != null && !selectedText.isEmpty()) {
+                  textArea.replaceSelection(text);
+                } else {
+                  textArea.append("\n\n" + text);
+                }
+              }
+            });
+          });
+        } catch (IOException ex) {
+          logger.error("Unable to complete transcription for " + inputFileName, ex);
+          throw new RuntimeException(ex);
+        } finally {
+          SwingUtilities.invokeLater(() -> {
+            bar.setValue(0);
+            transcribeButton.setEnabled(true);
+          });
+        }
+      });
+    }
 
   }
 
