@@ -145,18 +145,15 @@ public class ImageAnalysis {
     
     // Map UI model names to API model names
     String apiModel;
-    int actualN;
     if ("GPT-5".equals(model)) {
       apiModel = "gpt-5";
-      actualN = 1; // GPT-5 should always use n=1
     } else {
       apiModel = "chatgpt-4o-latest";
-      actualN = n; // GPT-4o can use the provided n value
       jsonBody.put("max_tokens", 10000);
     }
 
     jsonBody.put("model", apiModel);
-    jsonBody.put("n", actualN);
+    jsonBody.put("n", n);
 
     JSONArray messages = new JSONArray();
 

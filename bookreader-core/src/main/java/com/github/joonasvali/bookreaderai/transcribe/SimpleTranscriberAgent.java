@@ -114,6 +114,8 @@ public class SimpleTranscriberAgent {
   }
 
   private ProcessingResult<String[]> processImage(ImageAnalysis imageAnalysis) throws IOException {
-    return imageAnalysis.process(bufferedImage, samples);
+    // GPT-5 only supports n=1, so force samples to 1 when using GPT-5
+    int actualSamples = "GPT-5".equals(gptModel) ? 1 : samples;
+    return imageAnalysis.process(bufferedImage, actualSamples);
   }
 }
