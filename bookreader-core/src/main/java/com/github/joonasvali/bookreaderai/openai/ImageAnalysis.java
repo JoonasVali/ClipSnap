@@ -62,16 +62,24 @@ public class ImageAnalysis {
 
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
 
-    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
-    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+    BufferedImage imageToProcess;
+    
+    // For GPT-5, don't scale the image down
+    if ("GPT-5".equals(model)) {
+      logger.info("Using GPT-5: processing image without scaling");
+      imageToProcess = bufferedImage;
+    } else {
+      ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+      imageToProcess = imageResizer.resizeImageToLimits(bufferedImage);
+    }
 
-    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
+    String base64Image = convertBufferedImageToBase64(imageToProcess, "jpg");
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(resizedImage, "jpg", file.toFile());
+      ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
@@ -101,16 +109,25 @@ public class ImageAnalysis {
           result.completionTokens()
       );
     }
-    ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
-    BufferedImage resizedImage = imageResizer.resizeImageToLimits(bufferedImage);
+    
+    BufferedImage imageToProcess;
+    
+    // For GPT-5, don't scale the image down
+    if ("GPT-5".equals(model)) {
+      logger.info("Using GPT-5: processing image without scaling");
+      imageToProcess = bufferedImage;
+    } else {
+      ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
+      imageToProcess = imageResizer.resizeImageToLimits(bufferedImage);
+    }
 
-    String base64Image = convertBufferedImageToBase64(resizedImage, "jpg");
+    String base64Image = convertBufferedImageToBase64(imageToProcess, "jpg");
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
       Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
       logger.debug("Writing image to " + file);
-      ImageIO.write(resizedImage, "jpg", file.toFile());
+      ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, answers);
