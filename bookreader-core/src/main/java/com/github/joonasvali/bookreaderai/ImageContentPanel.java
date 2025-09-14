@@ -7,6 +7,7 @@ import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
 import com.github.joonasvali.bookreaderai.textutil.LineUtil;
 import com.github.joonasvali.bookreaderai.transcribe.JoinedTranscriber;
 import com.github.joonasvali.bookreaderai.transcribe.SimpleTranscriberAgent;
+import com.github.joonasvali.bookreaderai.util.ModelUtils;
 import org.slf4j.Logger;
 
 import javax.imageio.ImageIO;
@@ -241,12 +242,12 @@ public class ImageContentPanel extends JPanel {
       }
     }
 
-    // Check if GPT-5 is being used
-    boolean isGpt5 = "GPT-5".equals(hints.gptModel());
+    // Check if the model requires whole image processing
+    boolean requiresWholeImageProcessing = ModelUtils.requiresWholeImageProcessing(hints.gptModel());
     
-    if (isGpt5) {
-      // For GPT-5: process the whole image without slicing or scaling
-      logger.info("Using GPT-5: processing whole image without slicing");
+    if (requiresWholeImageProcessing) {
+      // For models that require whole image processing: process without slicing or scaling
+      logger.info("Using {}: processing whole image without slicing", hints.gptModel());
       
       SimpleTranscriberAgent transcriberAgent = new SimpleTranscriberAgent(croppedImage, hints.language(), hints.story(), 1, hints.gptModel());
       

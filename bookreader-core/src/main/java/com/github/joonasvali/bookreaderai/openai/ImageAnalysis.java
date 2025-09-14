@@ -2,6 +2,7 @@ package com.github.joonasvali.bookreaderai.openai;
 
 import com.github.joonasvali.bookreaderai.Constants;
 import com.github.joonasvali.bookreaderai.imageutil.ImageResizer;
+import com.github.joonasvali.bookreaderai.util.ModelUtils;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -64,9 +65,9 @@ public class ImageAnalysis {
 
     BufferedImage imageToProcess;
     
-    // For GPT-5, don't scale the image down
-    if ("GPT-5".equals(model)) {
-      logger.info("Using GPT-5: processing image without scaling");
+    // For models that require whole image processing, don't scale the image down
+    if (ModelUtils.requiresWholeImageProcessing(model)) {
+      logger.info("Using {}: processing image without scaling", model);
       imageToProcess = bufferedImage;
     } else {
       ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
@@ -112,9 +113,9 @@ public class ImageAnalysis {
     
     BufferedImage imageToProcess;
     
-    // For GPT-5, don't scale the image down
-    if ("GPT-5".equals(model)) {
-      logger.info("Using GPT-5: processing image without scaling");
+    // For models that require whole image processing, don't scale the image down
+    if (ModelUtils.requiresWholeImageProcessing(model)) {
+      logger.info("Using {}: processing image without scaling", model);
       imageToProcess = bufferedImage;
     } else {
       ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
@@ -162,7 +163,7 @@ public class ImageAnalysis {
     
     // Map UI model names to API model names
     String apiModel;
-    if ("GPT-5".equals(model)) {
+    if (ModelUtils.isGPT5Family(model)) {
       apiModel = "gpt-5";
     } else {
       apiModel = "chatgpt-4o-latest";

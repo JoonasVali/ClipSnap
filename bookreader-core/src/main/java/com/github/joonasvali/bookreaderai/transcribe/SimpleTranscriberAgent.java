@@ -2,6 +2,7 @@ package com.github.joonasvali.bookreaderai.transcribe;
 
 import com.github.joonasvali.bookreaderai.openai.ImageAnalysis;
 import com.github.joonasvali.bookreaderai.openai.ProcessingResult;
+import com.github.joonasvali.bookreaderai.util.ModelUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,8 +115,8 @@ public class SimpleTranscriberAgent {
   }
 
   private ProcessingResult<String[]> processImage(ImageAnalysis imageAnalysis) throws IOException {
-    // GPT-5 only supports n=1, so force samples to 1 when using GPT-5
-    int actualSamples = "GPT-5".equals(gptModel) ? 1 : samples;
+    // Some models only support n=1, so force samples to 1 when using those models
+    int actualSamples = ModelUtils.supportsMultipleSamples(gptModel) ? samples : 1;
     return imageAnalysis.process(bufferedImage, actualSamples);
   }
 }
