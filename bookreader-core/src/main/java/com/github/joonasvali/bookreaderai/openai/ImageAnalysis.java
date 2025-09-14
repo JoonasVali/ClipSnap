@@ -152,10 +152,10 @@ public class ImageAnalysis {
     } else {
       apiModel = "chatgpt-4o-latest";
       actualN = n; // GPT-4o can use the provided n value
+      jsonBody.put("max_tokens", 10000);
     }
-    
+
     jsonBody.put("model", apiModel);
-    jsonBody.put("max_tokens", 10000);
     jsonBody.put("n", actualN);
 
     JSONArray messages = new JSONArray();
@@ -184,9 +184,9 @@ public class ImageAnalysis {
 
   public static String sendRequestToOpenAI(JSONObject jsonBody, int retry) throws IOException {
     OkHttpClient client = new OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .connectTimeout(1200, TimeUnit.SECONDS)
+        .writeTimeout(1200, TimeUnit.SECONDS)
+        .readTimeout(1200, TimeUnit.SECONDS)
         .build();
 
     RequestBody requestBody = RequestBody.create(jsonBody.toString(), MediaType.parse("application/json"));
