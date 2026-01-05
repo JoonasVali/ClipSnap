@@ -96,9 +96,9 @@ public class SettingsPanel extends JPanel {
     JLabel modelLabel = new JLabel("GPT Model:");
     rightPanel.add(modelLabel);
     
-    String[] models = {"GPT-4o", "GPT-5"};
+    String[] models = {"GPT-4.1", "GPT-5.2"};
     gptModelComboBox = new JComboBox<>(models);
-    gptModelComboBox.setSelectedItem(preferences.get(GPT_MODEL_KEY, "GPT-4o"));
+    gptModelComboBox.setSelectedItem(preferences.get(GPT_MODEL_KEY, "GPT-4.1"));
     gptModelComboBox.addActionListener(e -> {
       preferences.put(GPT_MODEL_KEY, (String) gptModelComboBox.getSelectedItem());
     });

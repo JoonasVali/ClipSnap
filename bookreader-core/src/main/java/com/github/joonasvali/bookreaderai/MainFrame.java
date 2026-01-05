@@ -40,7 +40,7 @@ public class MainFrame extends JFrame {
         new TranscriptionHints(
             properties.getProperty("default.hint.language"),
             properties.getProperty("default.hint.story"),
-            "GPT-4o"
+            "GPT-4.1"
         ), (Path selectedFolder) -> {
       try {
         // List and sort image files from the selected folder

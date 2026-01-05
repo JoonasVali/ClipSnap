@@ -41,7 +41,7 @@ public class ImageAnalysis {
 
   public ImageAnalysis(String prompt) {
     this.prompt = prompt;
-    this.model = "chatgpt-4o-latest";
+    this.model = "gpt-4.1";
   }
 
   public ImageAnalysis(String prompt, String model) {
@@ -179,9 +179,9 @@ public class ImageAnalysis {
     // Map UI model names to API model names
     String apiModel;
     if (ModelUtils.isGPT5Family(model)) {
-      apiModel = "gpt-5";
+      apiModel = "gpt-5.2";
     } else {
-      apiModel = "chatgpt-4o-latest";
+      apiModel = "gpt-4.1";
       jsonBody.put("max_tokens", 10000);
     }
 

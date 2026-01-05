@@ -19,10 +19,10 @@ public class ModelUtils {
         }
         
         // Check for exact matches and future variants
-        return modelName.equals("GPT-5") || 
-               modelName.startsWith("GPT-5-") ||  // For future variants like GPT-5-turbo, GPT-5-vision, etc.
-               modelName.equals("gpt-5") ||      // API model name
-               modelName.startsWith("gpt-5-");   // API model variants
+        return modelName.equals("GPT-5.2") || 
+               modelName.startsWith("GPT-5") ||  // For GPT-5 family variants
+               modelName.equals("gpt-5.2") ||    // API model name
+               modelName.startsWith("gpt-5");    // API model variants
     }
     
     /**
@@ -36,9 +36,9 @@ public class ModelUtils {
             return false;
         }
         
-        return modelName.equals("GPT-4o") || 
+        return modelName.equals("GPT-4.1") || 
                modelName.startsWith("GPT-4") ||
-               modelName.equals("chatgpt-4o-latest") ||
+               modelName.equals("gpt-4.1") ||
                modelName.startsWith("gpt-4");
     }
     

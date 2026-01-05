@@ -42,7 +42,7 @@ public class SimpleTranscriberAgent {
   }
 
   public SimpleTranscriberAgent(BufferedImage bufferedImage, String language, String story) {
-    this(bufferedImage, language, story, 3, "GPT-4o");
+    this(bufferedImage, language, story, 3, "GPT-4.1");
   }
 
   public ProcessingResult<String> transcribe(String previousTranscription) {
