@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,20 +38,34 @@ public class ImageAnalysis {
 
   private final String prompt;
   private final String model;
-  
+
   public ImageAnalysis(String prompt) {
     this.prompt = prompt;
     this.model = "chatgpt-4o-latest";
   }
-  
+
   public ImageAnalysis(String prompt, String model) {
     this.prompt = prompt;
     this.model = model;
   }
 
   private static String convertBufferedImageToBase64(BufferedImage image, String format) throws IOException {
+    BufferedImage imageToWrite = image;
+
+    // If writing as JPEG and image has alpha channel, convert to RGB
+    if ("jpg".equalsIgnoreCase(format) || "jpeg".equalsIgnoreCase(format)) {
+      if (image.getColorModel().hasAlpha()) {
+        imageToWrite = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = imageToWrite.createGraphics();
+        g2d.setColor(Color.WHITE);  // Fill transparent areas with white
+        g2d.fillRect(0, 0, image.getWidth(), image.getHeight());
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+      }
+    }
+
     try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-      boolean written = ImageIO.write(image, format, outputStream);
+      boolean written = ImageIO.write(imageToWrite, format, outputStream);
       if (!written) {
         throw new IOException("No appropriate writer found for format: " + format);
       }
@@ -60,11 +76,10 @@ public class ImageAnalysis {
   }
 
 
-
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
 
     BufferedImage imageToProcess;
-    
+
     // For models that require whole image processing, don't scale the image down
     if (ModelUtils.requiresWholeImageProcessing(model)) {
       logger.info("Using {}: processing image without scaling", model);
@@ -78,13 +93,13 @@ public class ImageAnalysis {
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
-      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode() + ".jpg");
       logger.debug("Writing image to " + file);
       ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
-    String result =  sendRequestToOpenAI(jsonBody);
+    String result = sendRequestToOpenAI(jsonBody);
 
     if (result.startsWith("Error")) {
       throw new RuntimeException(result);
@@ -104,15 +119,15 @@ public class ImageAnalysis {
   public ProcessingResult<String[]> process(BufferedImage bufferedImage, int answers) throws IOException {
     if (answers == 1) {
       ProcessingResult<String> result = process(bufferedImage);
-      return new ProcessingResult<>(new String[]{ result.content() },
+      return new ProcessingResult<>(new String[]{result.content()},
           result.totalTokens(),
           result.promptTokens(),
           result.completionTokens()
       );
     }
-    
+
     BufferedImage imageToProcess;
-    
+
     // For models that require whole image processing, don't scale the image down
     if (ModelUtils.requiresWholeImageProcessing(model)) {
       logger.info("Using {}: processing image without scaling", model);
@@ -126,7 +141,7 @@ public class ImageAnalysis {
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
-      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".jpg");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode() + ".jpg");
       logger.debug("Writing image to " + file);
       ImageIO.write(imageToProcess, "jpg", file.toFile());
     }
@@ -160,7 +175,7 @@ public class ImageAnalysis {
 
   public JSONObject createJsonPayload(String base64Image, int n) {
     JSONObject jsonBody = new JSONObject();
-    
+
     // Map UI model names to API model names
     String apiModel;
     if (ModelUtils.isGPT5Family(model)) {
